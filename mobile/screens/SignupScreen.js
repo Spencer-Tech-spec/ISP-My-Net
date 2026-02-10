@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, TextInput, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
 import FontAwesome from '@react-native-vector-icons/fontawesome';
+import * as Linking from 'expo-linking';
 
 export default function SignupScreen({ navigation }) {
     const [email, setEmail] = useState('');
@@ -10,16 +11,21 @@ export default function SignupScreen({ navigation }) {
 
     async function signUpWithEmail() {
         setLoading(true);
+        const redirectTo = Linking.createURL('auth');
+
         const {
             data: { session },
             error,
         } = await supabase.auth.signUp({
             email: email,
             password: password,
+            options: {
+                emailRedirectTo: redirectTo,
+            },
         });
 
         if (error) Alert.alert(error.message);
-        else if (!session) Alert.alert('Please check your inbox for email verification!');
+        else if (!session) Alert.alert('Check your inbox!', `A verification link has been sent to your email. It will redirect you back to: ${redirectTo}`);
         setLoading(false);
     }
 
