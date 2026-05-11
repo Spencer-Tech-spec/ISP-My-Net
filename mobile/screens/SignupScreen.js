@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, TextInput, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 
 export default function SignupScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(false);
 
     async function signUpWithEmail() {
@@ -21,6 +24,11 @@ export default function SignupScreen({ navigation }) {
             password: password,
             options: {
                 emailRedirectTo: redirectTo,
+                data: {
+                    full_name: fullName,
+                    phone: phone,
+                    address: address,
+                }
             },
         });
 
@@ -32,6 +40,47 @@ export default function SignupScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <View style={[styles.verticallySpaced, styles.mt20]}>
+                <Text style={styles.label}>Full Name</Text>
+                <View style={styles.inputContainer}>
+                    <FontAwesome name="user" size={20} color="#86939e" style={styles.icon} />
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={(text) => setFullName(text)}
+                        value={fullName}
+                        placeholder="John Doe"
+                        placeholderTextColor="#86939e"
+                    />
+                </View>
+            </View>
+            <View style={styles.verticallySpaced}>
+                <Text style={styles.label}>Phone Number</Text>
+                <View style={styles.inputContainer}>
+                    <FontAwesome name="phone" size={20} color="#86939e" style={styles.icon} />
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={(text) => setPhone(text)}
+                        value={phone}
+                        placeholder="0712 345 678"
+                        placeholderTextColor="#86939e"
+                        keyboardType="phone-pad"
+                    />
+                </View>
+            </View>
+            <View style={styles.verticallySpaced}>
+                <Text style={styles.label}>Installation Address</Text>
+                <View style={styles.inputContainer}>
+                    <FontAwesome name="home" size={20} color="#86939e" style={styles.icon} />
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={(text) => setAddress(text)}
+                        value={address}
+                        placeholder="e.g. Skyline Apt, House 4B"
+                        placeholderTextColor="#86939e"
+                        multiline={true}
+                    />
+                </View>
+            </View>
+            <View style={styles.verticallySpaced}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
                     <FontAwesome name="envelope" size={20} color="#86939e" style={styles.icon} />
@@ -41,7 +90,8 @@ export default function SignupScreen({ navigation }) {
                         value={email}
                         placeholder="email@address.com"
                         placeholderTextColor="#86939e"
-                        autoCapitalize={'none'}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
                     />
                 </View>
             </View>
@@ -56,7 +106,7 @@ export default function SignupScreen({ navigation }) {
                         secureTextEntry={true}
                         placeholder="Password"
                         placeholderTextColor="#86939e"
-                        autoCapitalize={'none'}
+                        autoCapitalize="none"
                     />
                 </View>
             </View>

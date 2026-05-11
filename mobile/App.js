@@ -1,103 +1,72 @@
-import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { supabase } from './lib/supabase';
+import { ActivityIndicator, View } from 'react-native';
 
+// Import all screens
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import PaymentsScreen from './screens/PaymentsScreen';
-import SupportScreen from './screens/SupportScreen';
-import ProfileScreen from './screens/ProfileScreen';
 import PlansScreen from './screens/PlansScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import SupportScreen from './screens/SupportScreen';
 import PersonalInfoScreen from './screens/PersonalInfoScreen';
-import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import TermsScreen from './screens/TermsScreen';
-import { supabase } from './lib/supabase';
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
-
-function MainTabNavigator() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          let iconName;
-
-          if (route.name === 'Dashboard') {
-            iconName = 'home';
-          } else if (route.name === 'Payments') {
-            iconName = 'money';
-          } else if (route.name === 'Support') {
-            iconName = 'life-ring';
-          } else if (route.name === 'Profile') {
-            iconName = 'user';
-          }
-
-          return <FontAwesome name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#2089dc',
-        tabBarInactiveTintColor: 'gray',
-        headerShown: true,
-      })}
-    >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Payments" component={PaymentsScreen} />
-      <Tab.Screen name="Support" component={SupportScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    return () => subscription.unsubscribe();
   }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2089dc" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {session ? (
+        {session && session.user ? (
+          // Authenticated Screens
           <>
-            <Stack.Screen
-              name="Main"
-              component={MainTabNavigator}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Plans"
-              component={PlansScreen}
-              options={{ title: 'Select Plan' }}
-            />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'My Net Dashboard' }} />
+            <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: 'Payments & History' }} />
+            <Stack.Screen name="Plans" component={PlansScreen} options={{ title: 'Internet Plans' }} />
+            <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+            <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Get Help' }} />
             <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} options={{ title: 'Personal Information' }} />
-            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
-            <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms & Conditions' }} />
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
+            <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms of Service' }} />
           </>
         ) : (
+          // Auth Screens
           <>
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{ title: 'Welcome' }}
-            />
-            <Stack.Screen
-              name="Signup"
-              component={SignupScreen}
-              options={{ title: 'Create Account' }}
-            />
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Create Account' }} />
           </>
         )}
       </Stack.Navigator>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function PlansScreen({ navigation }) {
     const plans = [

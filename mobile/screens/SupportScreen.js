@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Linking } from 'react-native';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function SupportScreen() {
     const [subject, setSubject] = useState('');

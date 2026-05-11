@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking } from 'react-native';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
 export default function DashboardScreen({ navigation }) {
@@ -14,16 +14,33 @@ export default function DashboardScreen({ navigation }) {
     }, []);
 
     const fetchProfile = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                setUser(authUser);
+                
+                // Fetch additional profile data (status, plan)
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('status, plan')
+                    .eq('id', authUser.id)
+                    .single();
+
+                if (profile) {
+                    setStatus(profile.status || 'Inactive');
+                    setPlan(profile.plan || 'No Plan');
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
     };
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
-        // Simulate network request
-        setTimeout(() => {
+        fetchProfile().then(() => {
             setRefreshing(false);
-        }, 2000);
+        });
     }, []);
 
     return (
@@ -34,8 +51,15 @@ export default function DashboardScreen({ navigation }) {
             }
         >
             <View style={styles.header}>
-                <Text style={styles.welcomeText}>Welcome back,</Text>
-                <Text style={styles.userName}>{user?.email?.split('@')[0] || 'User'}</Text>
+                <View>
+                    <Text style={styles.welcomeText}>Welcome back,</Text>
+                    <Text style={styles.userName}>{user?.email?.split('@')[0] || 'User'}</Text>
+                </View>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    <View style={styles.profileCircle}>
+                        <FontAwesome name="user" size={24} color="#2089dc" />
+                    </View>
+                </TouchableOpacity>
             </View>
 
             {/* Connection Status Card */}
@@ -97,8 +121,24 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 24,
         marginTop: 10,
+    },
+    profileCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
     welcomeText: {
         fontSize: 16,

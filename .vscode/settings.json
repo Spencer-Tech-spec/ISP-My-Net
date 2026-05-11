@@ -1,0 +1,6 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\SPENCER\\Desktop\\ISP 1\\backend\\venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "C:\\Users\\SPENCER\\Desktop\\ISP 1\\backend"
+    ]
+}

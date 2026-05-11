@@ -1,13 +1,12 @@
 {
   "expo": {
     "name": "My Net",
-    "slug": "mynet",
+    "slug": "mobile",
     "scheme": "mynetisp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -32,6 +31,7 @@
       "eas": {
         "projectId": "3ce34ad1-aae0-4cce-bd62-820b7202485b"
       }
-    }
+    },
+    "owner": "spencer01"
   }
 }

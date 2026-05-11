@@ -1,0 +1,27 @@
+BACKEND/ADMIN PANEL
+WHEN EXPO IS RUNNING; #############################################:This will start the API at http://localhost:8000
+cd backend
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+###########################################: This will start the web dashboard at http://localhost:3000
+Open another new terminal and run:
+
+powershell
+cd frontend
+npm run dev
+#########################commands to run my backend and fronted##################fronted# 
+In the root directory:
+npm run dev
+##########backend########
+# 1. Activate the virtual environment
+.\venv\Scripts\activate
+cd backend
+source venv/Scripts/activate
+uvicorn app.main:app --reload
+
+
+cd mobile
+npm install --prefer-offline
+
+export NODE_OPTIONS="--dns-result-order=ipv4first"
+npx expo start --clear

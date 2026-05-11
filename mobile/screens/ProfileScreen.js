@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
 export default function ProfileScreen({ navigation }) {

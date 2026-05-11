@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, TextInput, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
@@ -15,13 +15,20 @@ export default function LoginScreen({ navigation }) {
             password: password,
         });
 
-        if (error) Alert.alert(error.message);
+        if (error) {
+            Alert.alert('Login Failed', error.message);
+        }
         setLoading(false);
     }
 
     return (
         <View style={styles.container}>
-            <View style={[styles.verticallySpaced, styles.mt20]}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Welcome Back</Text>
+                <Text style={styles.subtitle}>Sign in to manage your ISP account</Text>
+            </View>
+
+            <View style={styles.verticallySpaced}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
                     <FontAwesome name="envelope" size={20} color="#86939e" style={styles.icon} />
@@ -31,10 +38,12 @@ export default function LoginScreen({ navigation }) {
                         value={email}
                         placeholder="email@address.com"
                         placeholderTextColor="#86939e"
-                        autoCapitalize={'none'}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
                     />
                 </View>
             </View>
+
             <View style={styles.verticallySpaced}>
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputContainer}>
@@ -46,10 +55,11 @@ export default function LoginScreen({ navigation }) {
                         secureTextEntry={true}
                         placeholder="Password"
                         placeholderTextColor="#86939e"
-                        autoCapitalize={'none'}
+                        autoCapitalize="none"
                     />
                 </View>
             </View>
+
             <View style={[styles.verticallySpaced, styles.mt20]}>
                 <TouchableOpacity
                     style={[styles.button, styles.buttonPrimary]}
@@ -59,17 +69,18 @@ export default function LoginScreen({ navigation }) {
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.buttonText}>Sign in</Text>
+                        <Text style={styles.buttonText}>Log In</Text>
                     )}
                 </TouchableOpacity>
             </View>
+
             <View style={styles.verticallySpaced}>
                 <TouchableOpacity
                     style={[styles.button, styles.buttonSecondary]}
                     onPress={() => navigation.navigate('Signup')}
                     disabled={loading}
                 >
-                    <Text style={styles.buttonTextSecondary}>Sign up</Text>
+                    <Text style={styles.buttonTextSecondary}>Don't have an account? Sign Up</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -78,10 +89,24 @@ export default function LoginScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 40,
-        padding: 12,
+        padding: 20,
         flex: 1,
         backgroundColor: '#fff',
+        justifyContent: 'center',
+    },
+    header: {
+        marginBottom: 40,
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginTop: 10,
     },
     verticallySpaced: {
         paddingTop: 4,
@@ -120,7 +145,7 @@ const styles = StyleSheet.create({
     },
     button: {
         padding: 15,
-        borderRadius: 5,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -129,12 +154,10 @@ const styles = StyleSheet.create({
     },
     buttonSecondary: {
         backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: '#2089dc',
     },
     buttonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
     },
     buttonTextSecondary: {

@@ -9,9 +9,12 @@ import { Loader2 } from 'lucide-react'
 export default function SignupPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [fullName, setFullName] = useState('') // Optional: capture name
+    const [fullName, setFullName] = useState('')
+    const [phoneNumber, setPhoneNumber] = useState('')
+    const [address, setAddress] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
     const router = useRouter()
     const supabase = createClient()
 
@@ -22,29 +25,52 @@ export default function SignupPage() {
 
         try {
             const { error } = await supabase.auth.signUp({
-                email,
-                password,
+                email: email.trim(),
+                password: password.trim(),
                 options: {
                     data: {
-                        full_name: fullName,
+                        full_name: fullName.trim(),
+                        phone: phoneNumber.trim(),
+                        address: address.trim(),
                     },
                 },
             })
 
             if (error) throw error
 
-            // Ideally redirect to a "Check your email" page or Dashboard if email confirmation is disabled
-            alert('Signup successful! Please check your email for confirmation.')
-            router.push('/login')
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message)
-            } else {
-                setError('An unknown error occurred')
-            }
+            setSuccess(true)
+            // Optional: redirect after short delay
+            setTimeout(() => {
+                router.push('/login')
+            }, 3000)
+        } catch (err: any) {
+            setError(err.message)
         } finally {
             setLoading(false)
         }
+    }
+
+    if (success) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
+                <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 p-10 text-center space-y-6 animate-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-600 animate-bounce">
+                        <Loader2 className="w-10 h-10" />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900">Registration Successful!</h2>
+                    <p className="text-slate-600 font-medium">
+                        Verification email sent to <strong>{email}</strong>.
+                        Please check your inbox (and spam folder) to confirm your account.
+                    </p>
+                    <div className="pt-4">
+                        <Link href="/login" className="inline-flex items-center gap-2 text-blue-600 font-black hover:underline">
+                            Go to Login
+                        </Link>
+                    </div>
+                    <p className="text-xs text-slate-400">Redirecting to login in 3 seconds...</p>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -71,6 +97,30 @@ export default function SignupPage() {
                             required
                             className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             placeholder="John Doe"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number</label>
+                        <input
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            required
+                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            placeholder="0712 345 678"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Home/Installation Address</label>
+                        <input
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            required
+                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            placeholder="e.g. Skyline Apartments, House No. 4B"
                         />
                     </div>
 

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import FontAwesome from '@react-native-vector-icons/fontawesome';
+import { FontAwesome } from '@expo/vector-icons';
 
 // REPLACE WITH YOUR BACKEND URL (Use your computer's IP address if running on a physical device)
 // For Android Emulator, use 'http://10.0.2.2:8000'
 // For iOS Simulator, use 'http://localhost:8000'
-const API_URL = 'http://192.168.1.10:8000';
+const API_URL = 'http://192.168.1.129:8000';
 
 export default function PaymentsScreen() {
     const [amount, setAmount] = useState('');
@@ -19,38 +19,50 @@ export default function PaymentsScreen() {
         { id: 3, date: 'Dec 01, 2025', amount: 'KES 2,500', status: 'Success' },
     ];
 
-    const handlePayment = async () => {
+    const handlePayment = () => {
         if (!amount || !phoneNumber) {
             Alert.alert('Error', 'Please enter amount and phone number');
             return;
         }
 
-        setLoading(true);
-        try {
-            const response = await fetch(`${API_URL}/mpesa/stk_push`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    phone_number: phoneNumber,
-                    amount: parseInt(amount),
-                }),
-            });
+        Alert.alert(
+            'Confirm Payment',
+            `Are you sure you want to pay KES ${amount} to My Net ISP?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Confirm',
+                    onPress: async () => {
+                        setLoading(true);
+                        try {
+                            const response = await fetch(`${API_URL}/mpesa/stk_push`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    phone_number: phoneNumber,
+                                    amount: parseInt(amount),
+                                }),
+                            });
 
-            const data = await response.json();
+                            const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.detail || 'Payment failed');
-            }
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Payment failed');
+                            }
 
-            Alert.alert('Success', 'STK Push sent! Please check your phone to complete the payment.');
-            setAmount('');
-        } catch (error) {
-            Alert.alert('Payment Error', error.message);
-        } finally {
-            setLoading(false);
-        }
+                            Alert.alert('Success', 'STK Push sent! Please check your phone to complete the payment.');
+                            setAmount('');
+                        } catch (error) {
+                            Alert.alert('Payment Error', error.message);
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (

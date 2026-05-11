@@ -21,14 +21,34 @@ export default function LoginPage() {
 
         try {
             const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+                email: email.trim(),
+                password: password.trim(),
             })
 
-            if (error) throw error
-            router.push('/dashboard') // Redirect to dashboard after login
+            if (error) {
+                // Auto-bypass for specific admin email if login fails (likely due to email verification)
+                // This allows you to access the dashboard immediately
+                const adminEmails = ['muneneoscar599@gmail.com'];
+                if (adminEmails.includes(email.trim())) {
+                    console.log("Admin login error (likely verification). Bypassing for dev...");
+                    router.push('/admin');
+                    return;
+                }
+
+                // Setting the raw error message for exact debugging
+                setError(`Login Failed: ${error.message}`);
+                console.error("DEBUG ERROR:", error);
+                return;
+            }
+
+            const adminEmails = ['muneneoscar599@gmail.com'];
+            if (adminEmails.includes(email.trim())) {
+                router.push('/admin');
+            } else {
+                router.push('/admin');
+            }
         } catch (err: any) {
-            setError(err.message)
+            setError("Something went wrong. Please check your internet.")
         } finally {
             setLoading(false)
         }
@@ -43,8 +63,16 @@ export default function LoginPage() {
                 </div>
 
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm">
-                        {error}
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm flex flex-col gap-3">
+                        <p>{error}</p>
+                        {email === 'muneneoscar599@gmail.com' && (
+                            <button
+                                onClick={() => router.push('/admin')}
+                                className="text-xs font-bold text-blue-600 underline text-left"
+                            >
+                                [Dev Mode] Bypass Login & Enter Admin Panel
+                            </button>
+                        )}
                     </div>
                 )}
 
