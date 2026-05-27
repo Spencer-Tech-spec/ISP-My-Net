@@ -11,8 +11,10 @@ import {
     LogOut,
     Wifi,
     ShieldCheck,
+    UserCog,
     Menu,
-    X
+    X,
+    Ticket
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
@@ -56,6 +58,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { label: "Subscribers", href: "/admin/users", icon: <Users size={20} /> },
         { label: "Payments", href: "/admin/payments", icon: <CreditCard size={20} /> },
         { label: "Network Management", href: "/admin/network", icon: <Wifi size={20} /> },
+        { label: "Payroll Control", href: "/admin/payroll", icon: <CreditCard size={20} /> },
+        { label: "Staff Management", href: "/admin/employees", icon: <UserCog size={20} /> },
+        { label: "Support Tickets", href: "/admin/tickets", icon: <Ticket size={20} /> },
         { label: "Settings", href: "/admin/settings", icon: <Settings size={20} /> },
     ];
 

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Linking } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { supabase } from '../lib/supabase';
 
 export default function SupportScreen() {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const [userQuestion, setUserQuestion] = useState('');
     const [chatMessages, setChatMessages] = useState([
         { text: 'Hello! I can help with billing, connection issues, or router setup. What do you need help with?', sender: 'bot' }
@@ -43,24 +45,57 @@ export default function SupportScreen() {
         setUserQuestion('');
     };
 
-    const handleSubmitTicket = () => {
+    const [myTickets, setMyTickets] = useState([]);
+
+    const fetchMyTickets = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data } = await supabase
+                .from('support_tickets')
+                .select('*')
+                .eq('client_id', user.id)
+                .order('created_at', { ascending: false });
+            setMyTickets(data || []);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    useEffect(() => {
+        fetchMyTickets();
+    }, []);
+
+    const handleSubmitTicket = async () => {
         if (!subject || !message) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
-        const recipient = 'muneneoscar599@gmail.com';
-        const body = `Ticket Details:\n\n${message}`;
-        const url = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        setSubmitting(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not logged in");
 
-        Linking.openURL(url)
-            .then(() => {
-                setSubject('');
-                setMessage('');
-            })
-            .catch(() => {
-                Alert.alert('Error', 'Could not open email client.');
+            const { error } = await supabase.from('support_tickets').insert({
+                client_id: user.id,
+                subject,
+                description: message,
+                status: 'open',
+                priority: 'medium'
             });
+
+            if (error) throw error;
+
+            Alert.alert('Success', 'Your issue has been raised! An admin will assign a technician shortly.');
+            setSubject('');
+            setMessage('');
+            fetchMyTickets();
+        } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to submit ticket');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -69,6 +104,26 @@ export default function SupportScreen() {
                 <Text style={styles.title}>Support Center</Text>
                 <Text style={styles.subtitle}>How can we help you today?</Text>
             </View>
+
+            {/* My Tickets Section */}
+            {myTickets.length > 0 && (
+                <View style={styles.ticketsSection}>
+                    <Text style={styles.sectionTitle}>My Open Issues</Text>
+                    {myTickets.map(ticket => (
+                        <View key={ticket.id} style={styles.ticketCard}>
+                            <View style={styles.ticketHeader}>
+                                <Text style={styles.ticketSubject}>{ticket.subject}</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: ticket.status === 'open' ? '#fee2e2' : '#fef3c7' }]}>
+                                    <Text style={[styles.statusText, { color: ticket.status === 'open' ? '#ef4444' : '#d97706' }]}>
+                                        {ticket.status}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={styles.ticketDate}>{new Date(ticket.created_at).toLocaleDateString()}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
 
             {/* Contact Options */}
             <View style={styles.contactRow}>
@@ -178,6 +233,47 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         marginTop: 5,
+    },
+    ticketsSection: {
+        marginBottom: 24,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 12,
+        color: '#333',
+    },
+    ticketCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 10,
+        elevation: 1,
+    },
+    ticketHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    ticketSubject: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    statusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+    },
+    ticketDate: {
+        fontSize: 12,
+        color: '#94a3b8',
     },
     contactRow: {
         flexDirection: 'row',

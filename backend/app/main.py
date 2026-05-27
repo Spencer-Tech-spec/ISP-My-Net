@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # Import routers
-from app.routers import mikrotik, smartolt, mpesa, ai_assistant
+from app.routers import mikrotik, smartolt, mpesa, ai_assistant, employees, payroll, tickets
 
 app = FastAPI(title="My Net ISP Backend")
 
@@ -29,6 +29,9 @@ app.include_router(mikrotik.router)
 app.include_router(smartolt.router)
 app.include_router(mpesa.router)
 app.include_router(ai_assistant.router)
+app.include_router(employees.router)
+app.include_router(payroll.router)
+app.include_router(tickets.router)
 
 @app.get("/health")
 def read_root():
