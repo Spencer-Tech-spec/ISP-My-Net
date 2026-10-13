@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Linking } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
@@ -20,6 +20,11 @@ export default function StaffRouters() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openMaps = (query) => {
+    if (!query) return;
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
   };
 
   const renderItem = ({ item }) => (
@@ -58,6 +63,9 @@ export default function StaffRouters() {
       <View style={styles.actions}>
         <TouchableOpacity style={styles.configBtn}>
           <Text style={styles.configBtnText}>Configure</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.rebootBtn} onPress={() => openMaps(item.name)}>
+          <FontAwesome name="map-marker" color="#4f46e5" size={18} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.rebootBtn}>
           <FontAwesome name="refresh" color="#64748b" size={18} />

@@ -29,20 +29,33 @@ export default function PayrollAdminPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // In a real app, you'd call your backend API
-            // But for now we can fetch directly from Supabase for simplicity
             const { data: employees } = await supabase
                 .from('employees')
-                .select('*, profiles:id(full_name, email)');
+                .select('*');
             
             const { data: requests } = await supabase
                 .from('withdrawal_requests')
-                .select('*, profiles:employee_id(full_name)')
+                .select('*')
                 .eq('status', 'pending');
 
-            setData({ employees: employees || [], pending_withdrawals: requests || [] });
+            // Fetch profile names
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, email');
+            const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+            const mappedEmployees = (employees || []).map((emp: any) => ({
+                ...emp,
+                profiles: profileMap.get(emp.id) || null
+            }));
+
+            const mappedRequests = (requests || []).map((req: any) => ({
+                ...req,
+                profiles: profileMap.get(req.employee_id) || null
+            }));
+
+            setData({ employees: mappedEmployees, pending_withdrawals: mappedRequests });
         } catch (error) {
             console.error("Error fetching payroll data:", error);
+            setData({ employees: [], pending_withdrawals: [] });
         } finally {
             setLoading(false);
         }

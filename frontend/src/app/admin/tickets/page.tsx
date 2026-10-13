@@ -57,35 +57,35 @@ export default function TicketsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch tickets with a more robust query
             const { data: ticketData, error } = await supabase
                 .from('support_tickets')
-                .select(`
-                    *,
-                    profiles:client_id (
-                        full_name, 
-                        address
-                    ),
-                    assigned:assigned_employee_id (
-                        full_name
-                    )
-                `)
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error("Supabase Error:", error);
+                console.error("Supabase tickets error:", error);
             }
 
-            // Fetch employees
-            const { data: empData } = await supabase
+            // Fetch profile info to map names safely
+            const { data: allProfiles } = await supabase
                 .from('profiles')
-                .select('id, full_name, role')
-                .eq('role', 'employee');
+                .select('id, full_name, address, role');
+            
+            const profileMap = new Map((allProfiles || []).map((p: any) => [p.id, p]));
 
-            setTickets((ticketData as any) || []);
-            setEmployees(empData || []);
-        } catch (error) {
-            console.error("Error fetching data:", error);
+            const mappedTickets = (ticketData || []).map((t: any) => ({
+                ...t,
+                profiles: profileMap.get(t.client_id) || null,
+                assigned: profileMap.get(t.assigned_employee_id) || null
+            }));
+
+            // Filter employees
+            const emps = (allProfiles || []).filter((p: any) => p.role === 'employee');
+            setEmployees(emps as any);
+            setTickets(mappedTickets as any);
+        } catch (err) {
+            console.error("Tickets fetch exception:", err);
+            setTickets([]);
         } finally {
             setLoading(false);
         }

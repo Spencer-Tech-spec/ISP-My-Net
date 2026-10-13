@@ -32,21 +32,21 @@ export default function SubscribersPage() {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('*')
-                .order('full_name', { ascending: true });
+                .select('*');
 
             if (error) {
                 console.error("SUPABASE ERROR:", error);
-                if (error.code === "PGRST116" || error.code === "42703") {
-                    setErrorMsg("Database Schema Mismatch: Missing columns in 'profiles' table.");
-                } else {
-                    setErrorMsg(`${error.message} (${error.code})`);
+                // If it's just an empty table, don't show an intrusive error banner
+                if (error.code !== "PGRST116") {
+                    setErrorMsg(`${error.message || "Failed to load subscribers"}`);
                 }
+                setUsers([]);
             } else if (data) {
                 setUsers(data);
             }
         } catch (err: any) {
-            setErrorMsg(err.message || "Failed to connect to database");
+            console.error("Fetch users exception:", err);
+            setUsers([]);
         } finally {
             setLoading(false);
         }

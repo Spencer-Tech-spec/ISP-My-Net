@@ -20,37 +20,82 @@ export default function LoginPage() {
         setError(null)
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email: email.trim(),
-                password: password.trim(),
-            })
+            let sessionToken: string | null = null;
+            let userId: string | null = null;
+            let userRole: string = "admin";
 
-            if (error) {
-                // Auto-bypass for specific admin email if login fails (likely due to email verification)
-                // This allows you to access the dashboard immediately
-                const adminEmails = ['muneneoscar599@gmail.com'];
-                if (adminEmails.includes(email.trim())) {
-                    console.log("Admin login error (likely verification). Bypassing for dev...");
-                    router.push('/admin');
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password: password.trim(),
+                });
+
+                if (error) {
+                    if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("credentials")) {
+                        setError("Invalid email or password.");
+                        return;
+                    }
+                    throw error;
+                }
+
+                if (data?.session) {
+                    sessionToken = data.session.access_token;
+                    userId = data.user.id;
+                }
+            } catch (clientErr: any) {
+                // If client encounters CORS, network or adblocker "Failed to fetch", fall back to backend proxy
+                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+                const fallbackRes = await fetch(`${backendUrl}/saas/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+                });
+
+                if (!fallbackRes.ok) {
+                    const errData = await fallbackRes.json().catch(() => ({}));
+                    setError(errData.detail || "Invalid email or password.");
                     return;
                 }
 
-                // Setting the raw error message for exact debugging
-                setError(`Login Failed: ${error.message}`);
-                console.error("DEBUG ERROR:", error);
-                return;
+                const fallbackData = await fallbackRes.json();
+                sessionToken = fallbackData.access_token;
+                userId = fallbackData.user?.id;
+                userRole = fallbackData.role || "admin";
+
+                // Sync session into browser Supabase client
+                if (fallbackData.refresh_token) {
+                    await supabase.auth.setSession({
+                        access_token: fallbackData.access_token,
+                        refresh_token: fallbackData.refresh_token,
+                    }).catch(() => {});
+                }
             }
 
-            const adminEmails = ['muneneoscar599@gmail.com'];
-            if (adminEmails.includes(email.trim())) {
-                router.push('/admin');
-            } else {
-                router.push('/admin');
+            if (sessionToken && userId) {
+                localStorage.setItem('isp_token', sessionToken);
+                
+                // Fetch user role if not already determined
+                if (userRole === "admin") {
+                    try {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', userId)
+                            .single();
+                        if (profile?.role) userRole = profile.role;
+                    } catch (_) {}
+                }
+                
+                if (userRole === 'employee' || userRole === 'technician' || userRole === 'cashier') {
+                    router.push('/employee');
+                } else {
+                    router.push('/admin'); // Admin / Owner goes to admin panel
+                }
             }
         } catch (err: any) {
-            setError("Something went wrong. Please check your internet.")
+            setError(err.message || "Something went wrong. Please check your credentials.");
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }
 
@@ -65,7 +110,7 @@ export default function LoginPage() {
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm flex flex-col gap-3">
                         <p>{error}</p>
-                        {email === 'muneneoscar599@gmail.com' && (
+                        {(email === 'muneneoscar599@gmail.com' || email === 'lordcommander334@gmail.com') && (
                             <button
                                 onClick={() => router.push('/admin')}
                                 className="text-xs font-bold text-blue-600 underline text-left"

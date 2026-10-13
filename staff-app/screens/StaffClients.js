@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, SafeAreaView, Linking } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
@@ -17,12 +17,18 @@ export default function StaffClients() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch ALL clients from the profiles table so new signups are instantly visible
       const { data } = await supabase
-        .from('employee_clients')
-        .select('*, profiles:client_id(full_name, address, phone, status, plan)')
-        .eq('employee_id', user.id);
+        .from('profiles')
+        .select('*');
 
-      setClients(data || []);
+      // Map the data to match the expected nested structure (item.profiles.full_name)
+      const mappedData = (data || []).map(profile => ({
+        id: profile.id,
+        profiles: profile
+      }));
+
+      setClients(mappedData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -35,6 +41,11 @@ export default function StaffClients() {
     item.profiles?.address?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const openMaps = (query) => {
+    if (!query) return;
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.clientCard}>
       <View style={styles.clientInfo}>
@@ -43,10 +54,12 @@ export default function StaffClients() {
         </View>
         <View style={styles.details}>
           <Text style={styles.clientName}>{item.profiles?.full_name}</Text>
-          <View style={styles.metaRow}>
-            <FontAwesome name="map-marker" size={12} color="#64748b" />
-            <Text style={styles.metaText}>{item.profiles?.address}</Text>
-          </View>
+          <TouchableOpacity style={styles.metaRow} onPress={() => openMaps(item.profiles?.address || item.profiles?.full_name)}>
+            <FontAwesome name="map-marker" size={12} color="#4f46e5" />
+            <Text style={[styles.metaText, { color: '#4f46e5', textDecorationLine: 'underline' }]}>
+              {item.profiles?.address || 'Unknown Location'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
       
@@ -65,7 +78,7 @@ export default function StaffClients() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>My Clients</Text>
-        <Text style={styles.subtitle}>Subscribers assigned to your sector</Text>
+        <Text style={styles.subtitle}>All subscribers in the network</Text>
       </View>
 
       <View style={styles.searchContainer}>

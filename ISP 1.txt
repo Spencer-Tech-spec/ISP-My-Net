@@ -25,3 +25,35 @@ npm install --prefer-offline
 
 export NODE_OPTIONS="--dns-result-order=ipv4first"
 npx expo start --clear
+
+SANDBOX @Oscarmunene1
+
+174379
+bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+
+cd /d/CareFlow/careflow
+npm run dev
+
+# cd into backend first
+cd /d/CareFlow/backend
+uvicorn app.main:app --reload
+
+cd d:\Payroll
+git push origin main
+
+cd /d/Payroll/backend
+source .venv/Scripts/activate
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+cd "c:/Users/SPENCER/Desktop/ISP 1/backend" && source venv/Scripts/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+SMM
+cd c:/Users/SPENCER/Desktop/SMM/backend
+source venv/Scripts/activate
+uvicorn app.main:app --reload --port 8000
+
+git push origin main
+
+cd frontend
+npm install
+npm run dev

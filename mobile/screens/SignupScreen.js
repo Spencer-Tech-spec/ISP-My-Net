@@ -67,18 +67,19 @@ export default function SignupScreen({ navigation }) {
                 </View>
             </View>
             <View style={styles.verticallySpaced}>
-                <Text style={styles.label}>Installation Address</Text>
+                <Text style={styles.label}>Exact Area & Location</Text>
                 <View style={styles.inputContainer}>
-                    <FontAwesome name="home" size={20} color="#86939e" style={styles.icon} />
+                    <FontAwesome name="map-marker" size={20} color="#86939e" style={styles.icon} />
                     <TextInput
                         style={styles.input}
                         onChangeText={(text) => setAddress(text)}
                         value={address}
-                        placeholder="e.g. Skyline Apt, House 4B"
+                        placeholder="e.g. Juja South Estate, near Gate B"
                         placeholderTextColor="#86939e"
                         multiline={true}
                     />
                 </View>
+                <Text style={styles.hintText}>Please provide a specific area or landmark so our technicians can easily route to you via Google Maps.</Text>
             </View>
             <View style={styles.verticallySpaced}>
                 <Text style={styles.label}>Email</Text>
@@ -157,6 +158,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 5,
         marginLeft: 10,
+    },
+    hintText: {
+        fontSize: 12,
+        color: '#2089dc',
+        marginLeft: 10,
+        marginTop: 2,
+        fontStyle: 'italic',
     },
     inputContainer: {
         flexDirection: 'row',

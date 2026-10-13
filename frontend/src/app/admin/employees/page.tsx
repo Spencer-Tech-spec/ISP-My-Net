@@ -1,13 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase';
 import { UserPlus, Mail, Lock, User, DollarSign, Trash2, Shield, Loader2, CheckCircle, X } from 'lucide-react';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface Employee {
   id: string;
@@ -25,6 +20,7 @@ interface NewEmployee {
 }
 
 export default function AdminEmployeesPage() {
+  const supabase = createClient();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

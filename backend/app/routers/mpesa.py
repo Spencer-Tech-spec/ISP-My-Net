@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Depends
 from pydantic import BaseModel
 import requests
 import base64
 from datetime import datetime
 import os
 from app.database import supabase
-from app.utils import activate_client
+from app.client_actions import activate_client
+from app.utils.tenant import get_tenant_context, TenantContext
 
 router = APIRouter(
     prefix="/mpesa",
@@ -72,7 +73,11 @@ def get_access_token():
         raise HTTPException(status_code=500, detail="Failed to get M-Pesa Access Token")
 
 @router.post("/stk_push")
-def initiate_stk_push(payment: PaymentRequest, background_tasks: BackgroundTasks):
+def initiate_stk_push(
+    payment: PaymentRequest,
+    background_tasks: BackgroundTasks,
+    ctx: TenantContext = Depends(get_tenant_context),
+):
     creds = get_mpesa_credentials()
     passkey = creds["PASSKEY"]
     callback_url = creds["CALLBACK_URL"]
@@ -134,9 +139,10 @@ def initiate_stk_push(payment: PaymentRequest, background_tasks: BackgroundTasks
                     "checkout_request_id": checkout_request_id,
                     "merchant_request_id": merchant_request_id,
                     "status": "PENDING",
-                    "result_desc": "STK Push Initiated"
+                    "result_desc": "STK Push Initiated",
+                    "isp_id": ctx.isp_id,
                 }).execute()
-                print(f"Transaction recorded: {checkout_request_id}")
+                print(f"Transaction recorded: {checkout_request_id} for ISP {ctx.isp_id}")
             except Exception as e:
                 print(f"Database Error: {e}")
                 # Don't fail the request if DB fails, but log it and maybe alert admin

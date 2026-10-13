@@ -158,7 +158,7 @@ export default function StaffDashboard({ navigation }) {
             <FontAwesome name="signal" color="#4f46e5" size={20} />
             <Text style={[styles.toolText, { color: theme.text }]}>Signal Test</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <TouchableOpacity style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => navigation.navigate('Clients')}>
             <FontAwesome name="map-marker" color="#4f46e5" size={20} />
             <Text style={[styles.toolText, { color: theme.text }]}>Find Clients</Text>
           </TouchableOpacity>
