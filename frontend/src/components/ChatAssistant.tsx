@@ -60,10 +60,10 @@ export default function ChatAssistant() {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end max-w-[calc(100vw-2rem)] pointer-events-auto">
             {/* Chat Window */}
             {isOpen && (
-                <div className="mb-4 w-[380px] h-[550px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 duration-300">
+                <div className="mb-3 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[80vh] h-[520px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 duration-300">
                     {/* Header */}
                     <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
                         <div className="flex items-center gap-3">

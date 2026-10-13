@@ -52,9 +52,9 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#060918] text-white font-sans">
+    <div className="min-h-screen bg-[#060918] text-white font-sans overflow-x-hidden max-w-full">
       {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between bg-[#060918]/80 backdrop-blur-xl border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 py-4 flex items-center justify-between bg-[#060918]/90 backdrop-blur-xl border-b border-white/5">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
             <Zap className="w-5 h-5 text-white" />
@@ -75,55 +75,66 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <button className="md:hidden p-2 text-slate-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
+        <button className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle Menu">
           {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </nav>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-40 pt-20 bg-[#060918] flex flex-col gap-6 p-8 md:hidden">
-          {NAV_LINKS.map(l => <Link key={l.href} href={l.href} className="text-xl text-slate-300" onClick={() => setMenuOpen(false)}>{l.label}</Link>)}
-          <Link href="/signup" className="mt-4 text-center font-semibold bg-blue-600 py-4 rounded-xl text-lg" onClick={() => setMenuOpen(false)}>Start Free Trial</Link>
+        <div className="fixed inset-0 z-40 pt-24 bg-[#060918]/95 backdrop-blur-2xl flex flex-col gap-5 p-6 md:hidden animate-in fade-in duration-200">
+          {NAV_LINKS.map(l => (
+            <Link key={l.href} href={l.href} className="text-lg font-medium text-slate-200 hover:text-white py-2 border-b border-white/5" onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </Link>
+          ))}
+          <div className="pt-4 flex flex-col gap-3">
+            <Link href="/login" className="text-center font-bold text-slate-300 py-3 bg-white/5 rounded-xl border border-white/10" onClick={() => setMenuOpen(false)}>
+              Log in
+            </Link>
+            <Link href="/signup" className="text-center font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3.5 rounded-xl shadow-lg shadow-blue-500/25" onClick={() => setMenuOpen(false)}>
+              Start Free Trial
+            </Link>
+          </div>
         </div>
       )}
 
       {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center pt-20">
-        {/* Glow orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+      <section className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden">
+        {/* Glow orbs contained within section */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 md:left-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-0 sm:right-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="container mx-auto px-6 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-8">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Trusted by Kenyan ISPs — 14-day free trial
+        <div className="container mx-auto px-4 sm:px-6 text-center relative z-10 max-w-5xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs sm:text-sm font-medium mb-6 sm:mb-8">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shrink-0" />
+            <span>Trusted by Kenyan ISPs — 14-day free trial</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-[1.05]">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 leading-[1.1]">
             The Complete ISP Platform<br />
             <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Built for Kenya</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
             Manage customers, automate M-Pesa billing, control MikroTik routers,
             and handle your entire ISP operation from one powerful platform.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup" className="w-full sm:w-auto px-8 py-4 font-bold text-base bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-2xl shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto sm:max-w-none">
+            <Link href="/signup" className="w-full sm:w-auto px-7 py-3.5 sm:px-8 sm:py-4 font-bold text-base bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-2xl shadow-2xl shadow-blue-500/30 transition-all flex items-center justify-center gap-2">
               Start Free Trial <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link href="#pricing" className="w-full sm:w-auto px-8 py-4 font-semibold text-base bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all text-center">
+            <Link href="#pricing" className="w-full sm:w-auto px-7 py-3.5 sm:px-8 sm:py-4 font-semibold text-base bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all text-center">
               View Pricing
             </Link>
           </div>
 
           {/* Stats bar */}
-          <div className="mt-20 flex flex-wrap items-center justify-center gap-x-12 gap-y-6 border-t border-white/5 pt-12">
+          <div className="mt-14 sm:mt-20 flex flex-wrap items-center justify-center gap-x-8 sm:gap-x-12 gap-y-4 border-t border-white/5 pt-8 sm:pt-12">
             {[["14-Day", "Free Trial"], ["M-Pesa", "Integrated"], ["MikroTik", "Supported"], ["AI", "Powered"]].map(([val, label]) => (
-              <div key={label} className="text-center">
-                <div className="text-2xl font-black text-white">{val}</div>
-                <div className="text-sm text-slate-500">{label}</div>
+              <div key={label} className="text-center min-w-[70px]">
+                <div className="text-xl sm:text-2xl font-black text-white">{val}</div>
+                <div className="text-xs sm:text-sm text-slate-500">{label}</div>
               </div>
             ))}
           </div>
@@ -180,7 +191,7 @@ export default function HomePage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {PLANS.map(plan => (
-              <div key={plan.id} className={`relative rounded-3xl p-8 border transition-all ${plan.popular ? "border-blue-500/50 bg-gradient-to-br from-blue-950/60 to-indigo-950/60 shadow-2xl shadow-blue-500/10 scale-105" : "border-white/[0.08] bg-white/[0.03]"}`}>
+              <div key={plan.id} className={`relative rounded-3xl p-8 border transition-all ${plan.popular ? "border-blue-500/50 bg-gradient-to-br from-blue-950/60 to-indigo-950/60 shadow-2xl shadow-blue-500/10 md:scale-105" : "border-white/[0.08] bg-white/[0.03]"}`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold shadow-lg">
                     MOST POPULAR

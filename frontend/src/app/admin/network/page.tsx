@@ -424,76 +424,76 @@ export default function NetworkPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Wifi className="text-blue-600 w-8 h-8" />
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Wifi className="text-blue-600 w-7 h-7 sm:w-8 sm:h-8" />
                         MikroTik & Hotspot Hub
                     </h2>
-                    <p className="text-slate-500 text-sm">
+                    <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
                         Link MikroTik routers to billing, generate captive portal links, manage packages, and rescue lost payments.
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <button
                         onClick={() => fetchAllData()}
                         className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
                         title="Refresh All Data"
                     >
-                        <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                     </button>
                     <button
                         onClick={() => {
                             setRescueResult(null);
                             setShowRescueModal(true);
                         }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 whitespace-nowrap"
                     >
-                        <Sparkles size={18} />
-                        Rescue Lost Package
+                        <Sparkles size={16} />
+                        Rescue Package
                     </button>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 whitespace-nowrap"
                     >
-                        <Plus size={18} />
-                        Link New MikroTik
+                        <Plus size={16} />
+                        Link MikroTik
                     </button>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 p-1.5 bg-slate-200/60 rounded-2xl w-fit">
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-200/60 rounded-2xl overflow-x-auto max-w-full no-scrollbar">
                 <button
                     onClick={() => setActiveTab("routers")}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                    className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap shrink-0 ${
                         activeTab === "routers"
                             ? "bg-white text-blue-600 shadow-md shadow-slate-200"
                             : "text-slate-600 hover:text-slate-900"
                     }`}
                 >
-                    <Server size={18} />
+                    <Server size={16} />
                     Connected Routers ({nodes.length})
                 </button>
                 <button
                     onClick={() => setActiveTab("packages")}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                    className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap shrink-0 ${
                         activeTab === "packages"
                             ? "bg-white text-blue-600 shadow-md shadow-slate-200"
                             : "text-slate-600 hover:text-slate-900"
                     }`}
                 >
-                    <Zap size={18} />
+                    <Zap size={16} />
                     Hotspot Packages ({packages.length})
                 </button>
                 <button
                     onClick={() => setActiveTab("vouchers")}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                    className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap shrink-0 ${
                         activeTab === "vouchers"
                             ? "bg-white text-blue-600 shadow-md shadow-slate-200"
                             : "text-slate-600 hover:text-slate-900"
                     }`}
                 >
-                    <Ticket size={18} />
-                    Vouchers & Rescue Station ({vouchers.length})
+                    <Ticket size={16} />
+                    Vouchers & Rescue ({vouchers.length})
                 </button>
             </div>
 
@@ -684,7 +684,7 @@ export default function NetworkPage() {
                                 }`}
                             >
                                 {/* Edit / Delete / Toggle Actions Bar */}
-                                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                                     <button
                                         onClick={() => openEditPackageModal(pkg)}
                                         className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all"
@@ -1076,8 +1076,8 @@ export default function NetworkPage() {
             {/* MODAL 2: RESCUE / ALLOCATE LOST PACKAGE */}
             {showRescueModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-amber-500 text-white px-6 py-4 flex items-center justify-between">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-amber-500 text-white px-6 py-4 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2">
                                 <Sparkles size={22} className="text-yellow-200" />
                                 <div>
@@ -1091,7 +1091,7 @@ export default function NetworkPage() {
                         </div>
 
                         {!rescueResult ? (
-                            <form onSubmit={handleRescueVoucher} className="p-6 space-y-4">
+                            <form onSubmit={handleRescueVoucher} className="p-6 space-y-4 overflow-y-auto">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                                         Customer M-Pesa Phone Number *
@@ -1252,14 +1252,14 @@ export default function NetworkPage() {
             {/* MODAL 3: ADD PACKAGE */}
             {showAddPackageModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <h3 className="font-extrabold text-slate-900 text-lg">Create Hotspot Package</h3>
                             <button onClick={() => setShowAddPackageModal(false)} className="p-2 hover:bg-white rounded-xl text-slate-400">
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleAddPackage} className="p-6 space-y-4">
+                        <form onSubmit={handleAddPackage} className="p-6 space-y-4 overflow-y-auto">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Package Name</label>
                                 <input
@@ -1372,8 +1372,8 @@ export default function NetworkPage() {
             {/* MODAL: EDIT PACKAGE */}
             {showEditPackageModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex items-center justify-between">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2">
                                 <Pencil size={20} />
                                 <div>
@@ -1385,7 +1385,7 @@ export default function NetworkPage() {
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleEditPackage} className="p-6 space-y-4">
+                        <form onSubmit={handleEditPackage} className="p-6 space-y-4 overflow-y-auto">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Package Name</label>
                                 <input

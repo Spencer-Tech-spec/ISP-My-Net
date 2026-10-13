@@ -36,10 +36,15 @@ interface FreezeInfo {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const supabase = createClient();
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
 
     const [userName, setUserName] = useState("ISP Admin");
     const [userRole, setUserRole] = useState("Administrator");
@@ -240,10 +245,77 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans relative">
-            {/* Sidebar */}
+            {/* Mobile Drawer Backdrop */}
+            {mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 md:hidden animate-in fade-in duration-200"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Mobile Drawer */}
             <aside
-                className={`${isSidebarOpen ? "w-64" : "w-20"
-                    } transition-all duration-300 bg-white border-r border-slate-200 flex flex-col fixed h-full z-40`}
+                className={`fixed top-0 bottom-0 left-0 w-72 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 md:hidden ${
+                    mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+                }`}
+            >
+                <div className="p-5 flex items-center justify-between border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+                            <ShieldCheck className="text-white w-5 h-5" />
+                        </div>
+                        <span className="font-bold text-lg tracking-tight text-slate-900">Admin Hub</span>
+                    </div>
+                    <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+                        aria-label="Close Menu"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <nav className="flex-1 p-3 flex flex-col gap-1.5 overflow-y-auto">
+                    {navItems.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 p-3 rounded-xl text-sm transition-all ${
+                                pathname === item.href
+                                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 font-semibold"
+                                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                            }`}
+                        >
+                            <div className={pathname === item.href ? "text-white" : "text-slate-400"}>
+                                {item.icon}
+                            </div>
+                            <span>{item.label}</span>
+                        </Link>
+                    ))}
+                </nav>
+
+                <div className="p-4 border-t border-slate-100">
+                    <button
+                        onClick={async () => {
+                            if (typeof window !== "undefined") {
+                                localStorage.removeItem("isp_token");
+                            }
+                            await supabase.auth.signOut();
+                            router.push("/login");
+                        }}
+                        className="flex items-center gap-3 w-full p-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium text-sm"
+                    >
+                        <LogOut size={18} />
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Desktop Sidebar */}
+            <aside
+                className={`hidden md:flex ${isSidebarOpen ? "w-64" : "w-20"
+                    } transition-all duration-300 bg-white border-r border-slate-200 flex-col fixed h-full z-40`}
             >
                 <div className="p-6 flex items-center justify-between border-b border-slate-100">
                     <div className={`flex items-center gap-3 ${!isSidebarOpen && "hidden"}`}>
@@ -296,37 +368,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Main Content */}
-            <main className={`${isSidebarOpen ? "ml-64" : "ml-20"} flex-1 transition-all duration-300`}>
+            <main className={`flex-1 transition-all duration-300 ml-0 ${isSidebarOpen ? "md:ml-64" : "md:ml-20"} min-w-0 max-w-full overflow-x-hidden`}>
                 {/* Top Header */}
-                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-30 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold text-slate-800">
+                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 md:px-8 sticky top-0 z-30 shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                        <button
+                            onClick={() => setMobileMenuOpen(true)}
+                            className="p-2 -ml-2 rounded-xl hover:bg-slate-100 text-slate-600 md:hidden transition-colors"
+                            aria-label="Open Navigation"
+                        >
+                            <Menu size={22} />
+                        </button>
+                        <h1 className="text-base sm:text-xl font-bold text-slate-800 truncate">
                             {navItems.find(item => item.href === pathname)?.label || "Dashboard"}
                         </h1>
-                        <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             3% Revenue Plan
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                         <Link
                             href="/billing"
-                            className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-all"
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 sm:px-3 py-1.5 rounded-lg border border-blue-100 transition-all"
                         >
-                            Billing & Gateways
+                            Billing
                         </Link>
-                        <div className="flex flex-col items-end">
-                            <span className="text-sm font-bold text-slate-900">{userName}</span>
+                        <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-sm font-bold text-slate-900 leading-tight">{userName}</span>
                             <span className="text-xs text-slate-500">{userRole}</span>
                         </div>
-                        <div className="w-10 h-10 bg-slate-100 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 font-bold">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-100 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs sm:text-sm">
                             {userInitials}
                         </div>
                     </div>
                 </header>
 
-                <div className="p-8">
+                <div className="p-3 sm:p-6 md:p-8 max-w-full overflow-x-hidden">
                     {children}
                 </div>
             </main>
