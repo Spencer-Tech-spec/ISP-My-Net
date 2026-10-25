@@ -7,10 +7,11 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
   async rewrites() {
+    const supabaseTarget = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://asuxwdfunyfsymjhmexx.supabase.co";
     return [
       {
         source: "/supabase/:path*",
-        destination: "https://asuxwdfunyfsymjhmexx.supabase.co/:path*",
+        destination: `${supabaseTarget}/:path*`,
       },
     ];
   },

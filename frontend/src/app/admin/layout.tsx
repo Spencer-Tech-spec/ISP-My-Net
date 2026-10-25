@@ -86,10 +86,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         const checkUser = async () => {
             try {
+                const token = getToken();
+
                 // First attempt getUser()
                 let user = null;
                 try {
-                    const userRes = await supabase.auth.getUser();
+                    const userRes = token ? await supabase.auth.getUser(token) : await supabase.auth.getUser();
                     if (userRes?.data?.user) {
                         user = userRes.data.user;
                     }
@@ -108,11 +110,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const adminEmails = ['muneneoscar599@gmail.com', 'lordcommander334@gmail.com'];
 
                 if (!user) {
-                    const token = getToken();
                     if (!token) {
                         router.push("/login?error=Please+login+to+access+admin");
+                    } else {
+                        // User has token but Supabase client is hydrating: decode token payload
+                        try {
+                            const payloadBase64 = token.split('.')[1];
+                            const decoded = JSON.parse(atob(payloadBase64));
+                            if (decoded?.email) {
+                                user = {
+                                    id: decoded.sub,
+                                    email: decoded.email,
+                                    user_metadata: decoded.user_metadata || {}
+                                } as any;
+                            }
+                        } catch (_) {}
                     }
-                    return;
+                    if (!user) {
+                        setLoading(false);
+                        return;
+                    }
                 }
 
                 if (!adminEmails.includes(user.email || '') && user.user_metadata?.role !== 'admin' && user.user_metadata?.role !== 'isp_owner') {
@@ -462,7 +479,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             : "border-white/10 text-slate-400 hover:bg-white/5"
                                     }`}
                                 >
-                                    PayHero Gateway
+                                    Express STK Push
                                 </button>
                                 <button
                                     type="button"
@@ -473,7 +490,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             : "border-white/10 text-slate-400 hover:bg-white/5"
                                     }`}
                                 >
-                                    M-Pesa Daraja Direct
+                                    Direct Paybill
                                 </button>
                             </div>
 

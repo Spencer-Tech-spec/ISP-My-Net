@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
@@ -31,8 +32,13 @@ export default function LoginPage() {
                 });
 
                 if (error) {
-                    if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("credentials")) {
-                        setError("Invalid email or password.");
+                    const msg = error.message.toLowerCase();
+                    if (msg.includes("invalid") || msg.includes("credentials")) {
+                        setError("Invalid email or password. Please verify your credentials.");
+                        return;
+                    }
+                    if (msg.includes("email not confirmed")) {
+                        setError("Email is not confirmed yet. Please verify your email or check Supabase settings.");
                         return;
                     }
                     throw error;
@@ -43,31 +49,47 @@ export default function LoginPage() {
                     userId = data.user.id;
                 }
             } catch (clientErr: any) {
-                // If client encounters CORS, network or adblocker "Failed to fetch", fall back to backend proxy
-                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-                const fallbackRes = await fetch(`${backendUrl}/saas/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: email.trim(), password: password.trim() }),
-                });
+                // If client encounters CORS, network or connectivity failure, check if backend proxy is available
+                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+                const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+                const canUseBackend = backendUrl && !(isHttps && backendUrl.startsWith('http://localhost'));
 
-                if (!fallbackRes.ok) {
-                    const errData = await fallbackRes.json().catch(() => ({}));
-                    setError(errData.detail || "Invalid email or password.");
-                    return;
+                if (canUseBackend) {
+                    try {
+                        const fallbackRes = await fetch(`${backendUrl}/saas/login`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+                        });
+
+                        if (!fallbackRes.ok) {
+                            const errData = await fallbackRes.json().catch(() => ({}));
+                            setError(errData.detail || "Invalid email or password.");
+                            return;
+                        }
+
+                        const fallbackData = await fallbackRes.json();
+                        sessionToken = fallbackData.access_token;
+                        userId = fallbackData.user?.id;
+                        userRole = fallbackData.role || "admin";
+
+                        if (fallbackData.refresh_token) {
+                            await supabase.auth.setSession({
+                                access_token: fallbackData.access_token,
+                                refresh_token: fallbackData.refresh_token,
+                            }).catch(() => {});
+                        }
+                    } catch (_) {}
                 }
 
-                const fallbackData = await fallbackRes.json();
-                sessionToken = fallbackData.access_token;
-                userId = fallbackData.user?.id;
-                userRole = fallbackData.role || "admin";
-
-                // Sync session into browser Supabase client
-                if (fallbackData.refresh_token) {
-                    await supabase.auth.setSession({
-                        access_token: fallbackData.access_token,
-                        refresh_token: fallbackData.refresh_token,
-                    }).catch(() => {});
+                if (!sessionToken) {
+                    const rawMsg = (clientErr?.message || "").toLowerCase();
+                    if (rawMsg.includes("failed to fetch") || rawMsg.includes("networkerror") || rawMsg.includes("getaddrinfo")) {
+                        setError("Unable to connect to the authentication server. Please verify that your Supabase database is active and restored in your Supabase Dashboard.");
+                        return;
+                    }
+                    setError(clientErr?.message || "Invalid email or password.");
+                    return;
                 }
             }
 
@@ -103,53 +125,63 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
-                    <p className="text-slate-600 mt-2">Sign in to your My Net account</p>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
+                    <p className="text-slate-600 mt-2 text-sm">Sign in to your My Net account</p>
                 </div>
 
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm flex flex-col gap-3">
-                        <p>{error}</p>
-                        {(email === 'muneneoscar599@gmail.com' || email === 'lordcommander334@gmail.com') && (
-                            <button
-                                onClick={() => router.push('/admin')}
-                                className="text-xs font-bold text-blue-600 underline text-left"
-                            >
-                                [Dev Mode] Bypass Login & Enter Admin Panel
-                            </button>
-                        )}
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                        <p className="leading-snug">{error}</p>
                     </div>
                 )}
 
                 <form onSubmit={handleLogin} className="space-y-5">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                        <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                            Email address
+                        </label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            autoComplete="username"
+                            spellCheck={false}
+                            className="w-full px-4 py-2.5 text-base font-medium text-slate-900 bg-white rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none placeholder:text-slate-400 placeholder:font-normal transition-all shadow-sm"
                             placeholder="you@example.com"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            placeholder="••••••••"
-                        />
+                        <label className="block text-sm font-semibold text-slate-800 mb-1.5">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                                className="w-full pl-4 pr-11 py-2.5 text-base font-medium text-slate-900 bg-white rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none placeholder:text-slate-400 placeholder:font-normal transition-all shadow-sm"
+                                placeholder="Enter your password"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors focus:outline-none p-1"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In'}
                     </button>

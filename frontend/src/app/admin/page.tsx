@@ -147,7 +147,7 @@ export default function AdminDashboard() {
                         )}
                     </div>
                     <p className="text-slate-500 text-sm mt-1">
-                        Real-time status for your subscribers, network automation, and PayHero / M-Pesa collections.
+                        Real-time status for your subscribers, network automation, and payment collections.
                     </p>
                 </div>
 
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                     <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-emerald-100">
-                        <span>PayHero & M-Pesa Gateways</span>
+                        <span>Payment Gateways</span>
                         <span className="font-semibold text-white">Live Verified</span>
                     </div>
                 </div>
@@ -468,51 +468,13 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* ─── 3. Infrastructure Services Health ─────────────────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-7">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div>
-                        <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
-                            <ShieldCheck size={18} className="text-emerald-600" />
-                            Platform Core Services Status
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Real-time gateway endpoints & operational controllers</p>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        All Core Services Online
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                    {[
-                        { service: "PayHero Kenya Gateway", status: "Active & Ready", desc: "Channel 12481 Configured", color: "text-emerald-600" },
-                        { service: "Safaricom Daraja API", status: "Operational", desc: "STK Push & C2B Callbacks", color: "text-emerald-600" },
-                        { service: "FastAPI REST Server", status: "Healthy (Port 8000)", desc: "Multi-tenant context engine", color: "text-emerald-600" },
-                        { service: "Supabase Database", status: "Connected", desc: "PostgreSQL & RLS Policies", color: "text-emerald-600" },
-                        { service: "MikroTik Sync Engine", status: routerConfig.isConfigured ? "Connected" : "Standby", desc: "RouterOS API automation", color: routerConfig.isConfigured ? "text-emerald-600" : "text-amber-600" },
-                        { service: "3% SaaS Billing Lockout", status: "Active Guard", desc: "Automated freeze enforcement", color: "text-emerald-600" },
-                    ].map((item, idx) => (
-                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                            <div>
-                                <div className="font-bold text-slate-900 text-sm">{item.service}</div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">{item.desc}</div>
-                            </div>
-                            <span className={`inline-flex items-center gap-1 text-xs font-bold ${item.color}`}>
-                                <CheckCircle2 size={13} />
-                                {item.status}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* ─── 4. Real Customer Transactions Stream ──────────────────────── */}
+            {/* ─── Real Customer Transactions Stream ──────────────────────── */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <div>
                         <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
                             <TrendingUp size={18} className="text-blue-600" />
-                            Recent Subscriber Transactions (M-Pesa & PayHero)
+                            Recent Subscriber Transactions
                         </h3>
                         <p className="text-xs text-slate-500 mt-0.5">Live incoming customer subscription & voucher payments</p>
                     </div>
@@ -565,7 +527,7 @@ export default function AdminDashboard() {
                                                     ? "bg-purple-50 text-purple-700 border border-purple-200"
                                                     : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                             }`}>
-                                                {tx.gateway === "payhero" ? "PayHero" : "M-Pesa"}
+                                                {tx.gateway === "payhero" ? "Express" : "Direct"}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 font-black text-slate-900 text-base">
@@ -594,7 +556,7 @@ export default function AdminDashboard() {
                                             <div>
                                                 <p className="font-bold text-slate-700 text-sm">No Customer Payments Recorded Yet</p>
                                                 <p className="text-xs text-slate-400 max-w-sm mt-1">
-                                                    When subscribers make payments via PayHero or M-Pesa STK, their verified transactions will appear here in real-time.
+                                                    When subscribers make payments via mobile money, their verified transactions will appear here in real-time.
                                                 </p>
                                             </div>
                                             <Link

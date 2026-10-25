@@ -85,9 +85,10 @@ export default function AdminEmployeesPage() {
       showToast('error', 'All fields are required.');
       return;
     }
-    setSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/payroll/employees`, {
+      setSubmitting(true);
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${backendUrl}/payroll/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

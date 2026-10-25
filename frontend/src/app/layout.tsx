@@ -21,8 +21,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "My Net ISP Cloud — Kenyan ISP Management Platform",
-  description: "Professional multi-tenant SaaS platform for Kenyan ISPs. Manage subscribers, M-Pesa & PayHero payments, MikroTik routers, staff, payroll and billing — all in one place. 3% revenue share pricing.",
-  keywords: ["ISP management", "Kenya", "M-Pesa", "PayHero", "MikroTik", "SmartOLT", "subscriber management", "internet service provider"],
+  description: "Professional multi-tenant SaaS platform for Kenyan ISPs. Manage subscribers, mobile money payments, MikroTik routers, staff, payroll and billing — all in one place. 3% revenue share pricing.",
+  keywords: ["ISP management", "Kenya", "M-Pesa", "mobile money", "MikroTik", "SmartOLT", "subscriber management", "internet service provider"],
   authors: [{ name: "My Net ISP Cloud" }],
 };
 

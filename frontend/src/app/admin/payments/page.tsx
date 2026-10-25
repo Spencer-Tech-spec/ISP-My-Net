@@ -224,7 +224,7 @@ export default function PaymentsPage() {
                                                     ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                                     : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                             }`}>
-                                                {tx.gateway ? tx.gateway.toUpperCase() : 'M-PESA'}
+                                                {(tx.gateway || '').toLowerCase() === 'payhero' ? 'EXPRESS' : 'DIRECT'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-slate-800">
@@ -266,7 +266,7 @@ export default function PaymentsPage() {
                                     <td colSpan={7} className="py-16 text-center text-slate-400">
                                         <CreditCard className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                                         <p className="font-bold text-slate-600">No transactions recorded yet</p>
-                                        <p className="text-xs text-slate-400 mt-1">Live customer payments via M-Pesa Daraja & PayHero will appear here automatically.</p>
+                                        <p className="text-xs text-slate-400 mt-1">Live customer payments via mobile money will appear here automatically.</p>
                                     </td>
                                 </tr>
                             )}

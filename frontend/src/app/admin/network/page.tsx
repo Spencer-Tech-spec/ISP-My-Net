@@ -117,7 +117,17 @@ export default function NetworkPage() {
     });
 
     const supabase = createClient();
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const getApiBase = () => {
+        if (typeof window !== "undefined") {
+            const host = window.location.hostname;
+            if (host.includes("vercel.app") || host.includes("netlify.app")) {
+                return process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            }
+            return `http://${host}:8000`;
+        }
+        return process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    };
+    const API_BASE = getApiBase();
 
     const fetchAllData = async () => {
         setLoading(true);
@@ -173,10 +183,34 @@ export default function NetworkPage() {
         return routerId ? `${origin}/hotspot?router=${routerId}` : `${origin}/hotspot`;
     };
 
-    const handleCopy = (text: string, key: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedLink(key);
-        setTimeout(() => setCopiedLink(null), 3000);
+    const handleCopy = async (text: string, key: string) => {
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                setCopiedLink(key);
+                setTimeout(() => setCopiedLink(null), 3000);
+                return;
+            }
+        } catch {
+            // fallback to execCommand below
+        }
+
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            setCopiedLink(key);
+            setTimeout(() => setCopiedLink(null), 3000);
+        } catch (err) {
+            console.error("Copy failed:", err);
+        }
     };
 
     const handleTestConnection = async () => {
@@ -200,7 +234,11 @@ export default function NetworkPage() {
                 setTestResult({ success: false, message: data.message || "Connection failed. Please check IP & Port." });
             }
         } catch (err: any) {
-            setTestResult({ success: false, message: "Could not reach backend API: " + err.message });
+            const isLocalhost = API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1");
+            const hint = typeof window !== "undefined" && window.location.protocol === "https:" && isLocalhost
+                ? " (Backend is set to localhost while running on HTTPS. Please configure NEXT_PUBLIC_BACKEND_URL in Vercel to your deployed backend, or test locally at http://localhost:3000)."
+                : "";
+            setTestResult({ success: false, message: `Could not reach backend API (${API_BASE}): ${err.message}${hint}` });
         } finally {
             setTestingConnection(false);
         }
@@ -222,7 +260,22 @@ export default function NetworkPage() {
                 location: newNode.location,
             }).select();
 
-            if (error) throw error;
+            if (error) {
+                // If Supabase schema has not run the hotspot_schema.sql migration yet, insert core fields
+                if (error.message?.includes("column") || error.code === "PGRST204") {
+                    const fallbackRes = await supabase.from("mikrotik_routers").insert({
+                        name: newNode.name,
+                        host: newNode.host,
+                        port: newNode.port,
+                        username: newNode.username,
+                        password: newNode.password,
+                    }).select();
+                    if (fallbackRes.error) throw fallbackRes.error;
+                    alert("Router saved with core credentials!\n\nNotice: Please run 'hotspot_schema.sql' in your Supabase SQL Editor to enable full hotspot branding and custom captive domain columns.");
+                } else {
+                    throw error;
+                }
+            }
 
             setShowAddModal(false);
             setNewNode({

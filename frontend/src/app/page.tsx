@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   Zap, Globe, Shield, Users, CreditCard, BarChart3,
   Wifi, PhoneCall, Bot, CheckCircle, ArrowRight, Menu, X,
-  Star, Building2, Wrench, MessageSquare
+  Star, Building2, Wrench, MessageSquare, Calculator, Percent, Check
 } from "lucide-react";
 
 const NAV_LINKS = [
@@ -13,23 +13,7 @@ const NAV_LINKS = [
   { href: "#how-it-works", label: "How It Works" },
 ];
 
-const PLANS = [
-  {
-    id: "starter", name: "Starter", price: 400, popular: false,
-    color: "from-slate-600 to-slate-800",
-    features: ["Up to 100 customers", "3 staff accounts", "MikroTik control", "M-Pesa billing", "Basic support", "100 SMS/month"],
-  },
-  {
-    id: "standard", name: "Standard", price: 700, popular: true,
-    color: "from-blue-600 to-indigo-700",
-    features: ["Up to 500 customers", "10 staff accounts", "AI Support Assistant", "SMS Notifications", "Advanced analytics", "Employee payroll", "Ticket management", "Priority email support"],
-  },
-  {
-    id: "enterprise", name: "Enterprise", price: 1500, popular: false,
-    color: "from-violet-600 to-purple-800",
-    features: ["Unlimited customers", "50 staff accounts", "Everything in Standard", "API access", "White labeling", "Custom domain", "Priority phone support", "Dedicated onboarding"],
-  },
-];
+
 
 const FEATURES = [
   { icon: Wifi, title: "MikroTik & SmartOLT", desc: "Directly control your routers and fiber OLT devices from one dashboard.", color: "text-blue-500" },
@@ -50,6 +34,7 @@ const STEPS = [
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [estimatedRevenue, setEstimatedRevenue] = useState(250000);
 
   return (
     <div className="min-h-screen bg-[#060918] text-white font-sans overflow-x-hidden max-w-full">
@@ -183,41 +168,224 @@ export default function HomePage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" className="py-28">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">Simple, transparent pricing</h2>
-            <p className="text-slate-400 text-lg">Choose the plan that fits your ISP. Upgrade or downgrade anytime.</p>
+      <section id="pricing" className="py-28 relative">
+        {/* Glow backdrop */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs sm:text-sm font-bold mb-4 uppercase tracking-wider">
+              <Percent className="w-3.5 h-3.5 text-blue-400" />
+              <span>Transparent Pay-As-You-Grow Pricing</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 tracking-tight">
+              Simple 3% Monthly Revenue Share
+            </h2>
+            <p className="text-slate-400 text-base sm:text-lg leading-relaxed">
+              No expensive software licenses, no per-subscriber traps, and zero setup fees. We only make money when your ISP collects money.
+            </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {PLANS.map(plan => (
-              <div key={plan.id} className={`relative rounded-3xl p-8 border transition-all ${plan.popular ? "border-blue-500/50 bg-gradient-to-br from-blue-950/60 to-indigo-950/60 shadow-2xl shadow-blue-500/10 md:scale-105" : "border-white/[0.08] bg-white/[0.03]"}`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold shadow-lg">
-                    MOST POPULAR
+
+          {/* Interactive Calculator + Main Offer Grid */}
+          <div className="max-w-5xl mx-auto grid lg:grid-cols-12 gap-8 items-stretch mb-12">
+            {/* Left: The 3% Plan Details (7 cols) */}
+            <div className="lg:col-span-7 rounded-3xl p-8 sm:p-10 border border-blue-500/40 bg-gradient-to-b from-blue-950/40 via-[#0a102a] to-[#060918] shadow-2xl shadow-blue-600/10 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="px-3.5 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-full text-xs font-black tracking-wide uppercase">
+                    All-Inclusive ISP Cloud
                   </div>
-                )}
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    14-Day Free Trial Included
+                  </span>
+                </div>
+
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm text-slate-400">Ksh</span>
-                    <span className="text-4xl font-black">{plan.price.toLocaleString()}</span>
-                    <span className="text-slate-400 text-sm">/month</span>
+                  <h3 className="text-2xl font-black text-white mb-2">Performance Revenue Share</h3>
+                  <p className="text-slate-400 text-sm">
+                    Everything you need to automate, bill, monitor, and scale your Kenyan ISP network with zero upfront investment.
+                  </p>
+                </div>
+
+                <div className="flex items-baseline gap-2 mb-8 pb-6 border-b border-white/10">
+                  <span className="text-5xl sm:text-6xl font-black text-white tracking-tight">3%</span>
+                  <div className="text-slate-400 text-sm">
+                    <span className="text-white font-bold block">of verified monthly collections</span>
+                    <span>Zero revenue in a month? You pay KES 0.</span>
                   </div>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                      {f}
-                    </li>
+
+                <div className="space-y-3.5 mb-8">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                    Everything Included with Zero Limits:
+                  </div>
+                  {[
+                    "Unlimited MikroTik routers & SmartOLT integration",
+                    "Automated M-Pesa STK push & C2B Paybill billing",
+                    "Unlimited subscribers, PPPoE accounts & Hotspot vouchers",
+                    "AI Customer Support Chatbot for 24/7 client triage",
+                    "Staff management with role-based permissions & audits",
+                    "Technician dispatch, GPS mapping & ticket resolution",
+                    "Full employee payroll, deductions & monthly payslips",
+                    "Real-time financial analytics & automated monthly invoicing",
+                    "Dedicated WhatsApp & phone onboarding support in Kenya",
+                  ].map((feat) => (
+                    <div key={feat} className="flex items-start gap-3 text-sm text-slate-200">
+                      <div className="p-0.5 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                      <span>{feat}</span>
+                    </div>
                   ))}
-                </ul>
-                <Link href={`/signup?plan=${plan.id}`} className={`block text-center py-3.5 rounded-xl font-bold text-sm transition-all ${plan.popular ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25" : "bg-white/5 hover:bg-white/10 border border-white/10"}`}>
-                  Start Free Trial
-                </Link>
+                </div>
               </div>
-            ))}
+
+              <div>
+                <Link
+                  href="/signup?plan=revenue_share_3"
+                  className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-base transition-all shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 group"
+                >
+                  <span>Start 14-Day Free Trial</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <p className="text-center text-xs text-slate-500 mt-3 font-medium">
+                  No credit card required • Instant setup • Cancel anytime
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Live Interactive Fee Calculator (5 cols) */}
+            <div className="lg:col-span-5 rounded-3xl p-8 border border-white/10 bg-white/[0.03] backdrop-blur-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2.5 mb-6 text-slate-300">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                    <Calculator className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-base">Fee Estimator</h4>
+                    <p className="text-xs text-slate-400">See your exact cost and net earnings</p>
+                  </div>
+                </div>
+
+                {/* Monthly Collections Selector */}
+                <div className="mb-6">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                    Estimated Monthly ISP Collections
+                  </label>
+                  <div className="text-3xl font-black text-white mb-3">
+                    KES {estimatedRevenue.toLocaleString()}
+                  </div>
+
+                  {/* Range Slider */}
+                  <input
+                    type="range"
+                    min="20000"
+                    max="1500000"
+                    step="10000"
+                    value={estimatedRevenue}
+                    onChange={(e) => setEstimatedRevenue(Number(e.target.value))}
+                    className="w-full accent-blue-500 bg-white/10 rounded-lg h-2 cursor-pointer"
+                  />
+
+                  {/* Preset quick buttons */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {[50000, 150000, 300000, 600000, 1000000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setEstimatedRevenue(amt)}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg font-bold transition-all ${
+                          estimatedRevenue === amt
+                            ? "bg-blue-600 text-white"
+                            : "bg-white/5 text-slate-400 hover:bg-white/10"
+                        }`}
+                      >
+                        {amt >= 1000000 ? `${amt / 1000000}M` : `${amt / 1000}K`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Calculation breakdown cards */}
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-400 block">Platform Fee (3%)</span>
+                      <span className="text-xs text-slate-500">Only on collected revenue</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-blue-400">
+                        KES {Math.round(estimatedRevenue * 0.03).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-emerald-300 font-bold block">Your ISP Keeps (97%)</span>
+                      <span className="text-xs text-emerald-400/80">Direct to your Till / Paybill</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-emerald-300">
+                        KES {(estimatedRevenue - Math.round(estimatedRevenue * 0.03)).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Guarantees Box */}
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span><strong>Zero upfront fees:</strong> Test live for 14 days completely free.</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span><strong>No lock-in contract:</strong> Export your data anytime.</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span><strong>Grace protection:</strong> Automated payment window each month.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Why-Revenue-Share Value Pillars */}
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold mb-4">
+                01
+              </div>
+              <h4 className="font-bold text-white text-base mb-2">Zero Inactive Penalty</h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                If a subscriber is on leave or hasn&apos;t renewed, you aren&apos;t charged for them. You only pay for real revenue collected into your M-Pesa.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold mb-4">
+                02
+              </div>
+              <h4 className="font-bold text-white text-base mb-2">No Artificial Tier Limits</h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Add 50 or 5,000 customers. Connect 2 or 20 MikroTik routers. You get enterprise-grade features from day one without expensive tier upgrades.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold mb-4">
+                03
+              </div>
+              <h4 className="font-bold text-white text-base mb-2">Aligned Interests</h4>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                We are invested in your success. Platform upgrades, router reliability, AI support, and automated STK push billing are built to help you grow.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -250,7 +418,7 @@ export default function HomePage() {
           <div className="flex gap-6">
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+            <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
             <a href="https://wa.me/254700000000" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp Support</a>
           </div>
         </div>

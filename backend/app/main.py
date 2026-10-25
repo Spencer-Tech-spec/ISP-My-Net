@@ -31,18 +31,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(mikrotik.router)
-app.include_router(smartolt.router)
-app.include_router(mpesa.router)
-app.include_router(ai_assistant.router)
-app.include_router(employees.router)
-app.include_router(payroll.router)
-app.include_router(tickets.router)
-# SaaS Platform Routers
-app.include_router(saas_auth.router)
-app.include_router(subscriptions.router)
-app.include_router(payhero.router)
+# Include routers (support both root prefixes and /api prefixes)
+routers_to_mount = [
+    mikrotik.router,
+    smartolt.router,
+    mpesa.router,
+    ai_assistant.router,
+    employees.router,
+    payroll.router,
+    tickets.router,
+    saas_auth.router,
+    subscriptions.router,
+    payhero.router,
+]
+
+for r in routers_to_mount:
+    app.include_router(r)
+    app.include_router(r, prefix="/api")
 
 @app.get("/health")
 def read_root():

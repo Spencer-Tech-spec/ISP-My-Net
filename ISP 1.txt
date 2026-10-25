@@ -57,3 +57,20 @@ git push origin main
 cd frontend
 npm install
 npm run dev
+
+
+UPDATE users 
+SET balance = 100000.00 
+WHERE role = 'super_admin';
+
+-- (Optional) Add an audit record to your transaction ledger:
+INSERT INTO transactions (
+    id, user_id, type, amount, balance_before, balance_after,
+    currency, payment_method, status, description, created_at, updated_at
+)
+SELECT 
+    gen_random_uuid(), id, 'deposit', 100000.00, balance, 100000.00,
+    'KES', 'manual', 'completed', 'Super Admin Balance Adjustment', NOW(), NOW()
+FROM users 
+WHERE role = 'super_admin';
+

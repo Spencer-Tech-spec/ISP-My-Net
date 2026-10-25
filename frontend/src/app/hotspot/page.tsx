@@ -45,7 +45,7 @@ function HotspotPortalContent() {
     const [copiedCode, setCopiedCode] = useState(false);
 
     const supabase = createClient();
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
     useEffect(() => {
         const fetchPortalData = async () => {
@@ -202,10 +202,34 @@ function HotspotPortalContent() {
         }
     };
 
-    const handleCopyCode = (code: string) => {
-        navigator.clipboard.writeText(code);
-        setCopiedCode(true);
-        setTimeout(() => setCopiedCode(false), 2500);
+    const handleCopyCode = async (code: string) => {
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(code);
+                setCopiedCode(true);
+                setTimeout(() => setCopiedCode(false), 2500);
+                return;
+            }
+        } catch {
+            // fallback below
+        }
+
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            setCopiedCode(true);
+            setTimeout(() => setCopiedCode(false), 2500);
+        } catch (err) {
+            console.error("Copy code failed:", err);
+        }
     };
 
     return (

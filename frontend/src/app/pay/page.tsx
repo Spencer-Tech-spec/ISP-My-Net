@@ -27,7 +27,8 @@ export default function PaymentPage() {
                 cleanPhone = '254' + cleanPhone
             }
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/mpesa/stk_push`, {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${backendUrl}/api/mpesa/stk_push`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
