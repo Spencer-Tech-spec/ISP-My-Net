@@ -43,6 +43,10 @@ export default function NetworkPage() {
     const [loading, setLoading] = useState(true);
     const [searchPhone, setSearchPhone] = useState("");
     const [selectedRouterFilter, setSelectedRouterFilter] = useState<string>("all");
+    const [packageSearch, setPackageSearch] = useState("");
+    const [packageRouterFilter, setPackageRouterFilter] = useState("all");
+    const [packageSortBy, setPackageSortBy] = useState<"newest" | "price_asc" | "price_desc">("price_asc");
+    const [newlyCreatedPackageId, setNewlyCreatedPackageId] = useState<number | null>(null);
 
     // Modals
     const [showAddModal, setShowAddModal] = useState(false);
@@ -370,8 +374,31 @@ export default function NetworkPage() {
                 payload.router_id = Number(newPackage.router_id);
             }
 
-            const { error } = await supabase.from("hotspot_packages").insert(payload);
-            if (error) throw error;
+            let savedPackage: any = null;
+
+            // 1. Server-side API route (handles admin permissions cleanly on Vercel)
+            try {
+                const res = await fetch("/api/packages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.package) {
+                        savedPackage = data.package;
+                    }
+                }
+            } catch (err) {
+                console.warn("Server API package creation fallback:", err);
+            }
+
+            // 2. Direct Supabase fallback
+            if (!savedPackage) {
+                const { data, error } = await supabase.from("hotspot_packages").insert(payload).select().single();
+                if (error) throw error;
+                savedPackage = data;
+            }
 
             setShowAddPackageModal(false);
             setNewPackage({
@@ -383,7 +410,15 @@ export default function NetworkPage() {
                 device_limit: 1,
                 router_id: "",
             });
-            fetchAllData();
+
+            if (savedPackage) {
+                setNewlyCreatedPackageId(savedPackage.id);
+                setPackageSortBy("newest"); // Automatically show newly created package at top
+                setPackages((prev) => [savedPackage, ...prev.filter((p) => p.id !== savedPackage.id)]);
+                setTimeout(() => setNewlyCreatedPackageId(null), 5000);
+            } else {
+                fetchAllData();
+            }
         } catch (err: any) {
             console.error("Failed to create package:", err);
             const msg = err.message || err.details || err.hint || (typeof err === "object" ? JSON.stringify(err) : String(err));
@@ -412,11 +447,31 @@ export default function NetworkPage() {
                 payload.router_id = null;
             }
 
-            const { error } = await supabase.from("hotspot_packages").update(payload).eq("id", editPackage.id);
-            if (error) throw error;
+            let updatedPackage: any = null;
+            try {
+                const res = await fetch("/api/packages", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: editPackage.id, ...payload }),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.package) updatedPackage = data.package;
+                }
+            } catch (_) {}
+
+            if (!updatedPackage) {
+                const { data, error } = await supabase.from("hotspot_packages").update(payload).eq("id", editPackage.id).select().single();
+                if (error) throw error;
+                updatedPackage = data;
+            }
 
             setShowEditPackageModal(false);
-            fetchAllData();
+            if (updatedPackage) {
+                setPackages((prev) => prev.map((p) => (p.id === updatedPackage.id ? updatedPackage : p)));
+            } else {
+                fetchAllData();
+            }
         } catch (err: any) {
             console.error("Failed to update package:", err);
             const msg = err.message || err.details || err.hint || (typeof err === "object" ? JSON.stringify(err) : String(err));
@@ -429,9 +484,17 @@ export default function NetworkPage() {
     const handleDeletePackage = async (id: number, name: string) => {
         if (!window.confirm(`Are you sure you want to delete the package "${name}"? This cannot be undone.`)) return;
         try {
-            const { error } = await supabase.from("hotspot_packages").delete().eq("id", id);
-            if (error) throw error;
-            setPackages(packages.filter((p) => p.id !== id));
+            let deleted = false;
+            try {
+                const res = await fetch(`/api/packages?id=${id}`, { method: "DELETE" });
+                if (res.ok) deleted = true;
+            } catch (_) {}
+
+            if (!deleted) {
+                const { error } = await supabase.from("hotspot_packages").delete().eq("id", id);
+                if (error) throw error;
+            }
+            setPackages((prev) => prev.filter((p) => p.id !== id));
         } catch (err: any) {
             console.error("Failed to delete package:", err);
             const msg = err.message || err.details || err.hint || (typeof err === "object" ? JSON.stringify(err) : String(err));
@@ -442,12 +505,24 @@ export default function NetworkPage() {
     const handleTogglePackageActive = async (pkg: any) => {
         try {
             const newStatus = !pkg.is_active;
-            const { error } = await supabase
-                .from("hotspot_packages")
-                .update({ is_active: newStatus })
-                .eq("id", pkg.id);
-            if (error) throw error;
-            setPackages(packages.map((p) => p.id === pkg.id ? { ...p, is_active: newStatus } : p));
+            let updated = false;
+            try {
+                const res = await fetch("/api/packages", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: pkg.id, is_active: newStatus }),
+                });
+                if (res.ok) updated = true;
+            } catch (_) {}
+
+            if (!updated) {
+                const { error } = await supabase
+                    .from("hotspot_packages")
+                    .update({ is_active: newStatus })
+                    .eq("id", pkg.id);
+                if (error) throw error;
+            }
+            setPackages(packages.map((p) => (p.id === pkg.id ? { ...p, is_active: newStatus } : p)));
         } catch (err: any) {
             console.error("Failed to toggle package:", err);
             const msg = err.message || err.details || err.hint || (typeof err === "object" ? JSON.stringify(err) : String(err));
@@ -515,6 +590,32 @@ export default function NetworkPage() {
         const matchesRouter = selectedRouterFilter === "all" ? true : String(v.router_id) === selectedRouterFilter;
         return matchesPhone && matchesRouter;
     });
+
+    const filteredPackages = packages
+        .filter((pkg) => {
+            const matchesSearch = packageSearch
+                ? (pkg.name || "").toLowerCase().includes(packageSearch.toLowerCase()) ||
+                  (pkg.duration_label || "").toLowerCase().includes(packageSearch.toLowerCase()) ||
+                  (pkg.speed_limit || "").toLowerCase().includes(packageSearch.toLowerCase()) ||
+                  String(pkg.price).includes(packageSearch)
+                : true;
+            const matchesRouter =
+                packageRouterFilter === "all"
+                    ? true
+                    : packageRouterFilter === "global"
+                    ? !pkg.router_id
+                    : String(pkg.router_id) === packageRouterFilter;
+            return matchesSearch && matchesRouter;
+        })
+        .sort((a, b) => {
+            if (packageSortBy === "newest") {
+                return (b.id || 0) - (a.id || 0);
+            }
+            if (packageSortBy === "price_desc") {
+                return (b.price || 0) - (a.price || 0);
+            }
+            return (a.price || 0) - (b.price || 0);
+        });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -764,126 +865,209 @@ export default function NetworkPage() {
             {/* TAB 2: HOTSPOT PACKAGES */}
             {activeTab === "packages" && (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <h3 className="text-xl font-black text-slate-800">Available Hotspot Packages</h3>
-                            <p className="text-slate-500 text-sm">Packages shown to customers on the captive portal buy page.</p>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xl font-black text-slate-800">Available Hotspot Packages</h3>
+                                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700">
+                                    {packages.length} Total
+                                </span>
+                            </div>
+                            <p className="text-slate-500 text-sm mt-0.5">
+                                Packages shown to customers on the captive portal buy page ({filteredPackages.length} shown).
+                            </p>
                         </div>
                         <button
                             onClick={() => setShowAddPackageModal(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 whitespace-nowrap"
                         >
                             <Plus size={18} /> Add New Package
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {packages.map((pkg) => (
-                            <div
-                                key={pkg.id}
-                                className={`bg-white p-6 rounded-3xl border shadow-xl shadow-slate-100/50 hover:shadow-2xl transition-all relative overflow-hidden group ${
-                                    pkg.is_active === false ? "border-slate-200 opacity-70" : "border-slate-100"
-                                }`}
+                    {/* Filter and Search Bar for Packages */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/70 shadow-sm">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                            <input
+                                type="text"
+                                placeholder="Search packages by name, duration, speed or price..."
+                                value={packageSearch}
+                                onChange={(e) => setPackageSearch(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                            {packageSearch && (
+                                <button
+                                    onClick={() => setPackageSearch("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <select
+                                value={packageRouterFilter}
+                                onChange={(e) => setPackageRouterFilter(e.target.value)}
+                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
                             >
-                                {/* Edit / Delete / Toggle Actions Bar */}
-                                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={() => openEditPackageModal(pkg)}
-                                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all"
-                                        title="Edit Package"
-                                    >
-                                        <Pencil size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleTogglePackageActive(pkg)}
-                                        className={`p-1.5 rounded-lg transition-all ${
-                                            pkg.is_active !== false
-                                                ? "bg-amber-50 hover:bg-amber-100 text-amber-600"
-                                                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-600"
-                                        }`}
-                                        title={pkg.is_active !== false ? "Deactivate Package" : "Activate Package"}
-                                    >
-                                        <Power size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeletePackage(pkg.id, pkg.name)}
-                                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition-all"
-                                        title="Delete Package"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                                <option value="all">All Routers ({packages.length})</option>
+                                <option value="global">Global (All Routers)</option>
+                                {nodes.map((node) => (
+                                    <option key={node.id} value={String(node.id)}>
+                                        {node.name}
+                                    </option>
+                                ))}
+                            </select>
 
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider">
-                                            {pkg.duration_label}
-                                        </span>
-                                        <h4 className="text-xl font-black text-slate-900 mt-2">{pkg.name}</h4>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-2xl font-black text-slate-900">KES {pkg.price}</span>
-                                    </div>
-                                </div>
+                            <select
+                                value={packageSortBy}
+                                onChange={(e) => setPackageSortBy(e.target.value as any)}
+                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+                            >
+                                <option value="newest">Sort: Newest First</option>
+                                <option value="price_asc">Sort: Price: Low to High</option>
+                                <option value="price_desc">Sort: Price: High to Low</option>
+                            </select>
+                        </div>
+                    </div>
 
-                                <div className="space-y-2 py-4 border-y border-slate-100 text-xs font-bold text-slate-600">
-                                    <div className="flex items-center justify-between">
-                                        <span>Speed Limit</span>
-                                        <span className="text-slate-900 font-extrabold">{pkg.speed_limit || "5M/5M"}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span>Duration</span>
-                                        <span className="text-slate-900 font-extrabold">{pkg.duration_minutes} Mins</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span>Device Limit</span>
-                                        <span className="text-slate-900 font-extrabold">{pkg.device_limit || 1} Device</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span>Assigned Router</span>
-                                        <span className="text-slate-900 font-extrabold">
-                                            {pkg.router_id ? nodes.find(n => n.id === pkg.router_id)?.name || `Router #${pkg.router_id}` : "Global (All Routers)"}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 flex items-center justify-between text-xs">
-                                    {pkg.is_active !== false ? (
-                                        <span className="flex items-center gap-1.5 font-bold text-emerald-600">
-                                            <CheckCircle2 size={14} /> Active
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1.5 font-bold text-slate-400">
-                                            <Power size={14} /> Inactive
-                                        </span>
+                    {filteredPackages.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredPackages.map((pkg) => (
+                                <div
+                                    key={pkg.id}
+                                    className={`bg-white p-6 rounded-3xl border shadow-xl shadow-slate-100/50 hover:shadow-2xl transition-all relative overflow-hidden group ${
+                                        newlyCreatedPackageId === pkg.id
+                                            ? "ring-2 ring-emerald-500 border-emerald-300 shadow-emerald-500/20"
+                                            : pkg.is_active === false
+                                            ? "border-slate-200 opacity-70"
+                                            : "border-slate-100"
+                                    }`}
+                                >
+                                    {newlyCreatedPackageId === pkg.id && (
+                                        <div className="absolute top-0 left-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase text-center py-0.5 tracking-widest">
+                                            Newly Created Package
+                                        </div>
                                     )}
-                                    <div className="flex items-center gap-3">
+                                    {/* Edit / Delete / Toggle Actions Bar */}
+                                    <div className="absolute top-3 right-3 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                                         <button
                                             onClick={() => openEditPackageModal(pkg)}
-                                            className="font-bold text-slate-500 hover:text-blue-600 hover:underline flex items-center gap-1"
+                                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all"
+                                            title="Edit Package"
                                         >
-                                            <Pencil size={12} /> Edit
+                                            <Pencil size={14} />
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setRescueForm({
-                                                    phone_number: "",
-                                                    router_id: pkg.router_id ? String(pkg.router_id) : (nodes[0]?.id ? String(nodes[0].id) : ""),
-                                                    package_id: String(pkg.id),
-                                                    mpesa_receipt: "",
-                                                    notes: `Direct allocation of ${pkg.name}`
-                                                });
-                                                setShowRescueModal(true);
-                                            }}
-                                            className="font-bold text-blue-600 hover:underline"
+                                            onClick={() => handleTogglePackageActive(pkg)}
+                                            className={`p-1.5 rounded-lg transition-all ${
+                                                pkg.is_active !== false
+                                                    ? "bg-amber-50 hover:bg-amber-100 text-amber-600"
+                                                    : "bg-emerald-50 hover:bg-emerald-100 text-emerald-600"
+                                            }`}
+                                            title={pkg.is_active !== false ? "Deactivate Package" : "Activate Package"}
                                         >
-                                            Rescue/Issue This Package →
+                                            <Power size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeletePackage(pkg.id, pkg.name)}
+                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition-all"
+                                            title="Delete Package"
+                                        >
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
+
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider">
+                                                {pkg.duration_label}
+                                            </span>
+                                            <h4 className="text-xl font-black text-slate-900 mt-2">{pkg.name}</h4>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-2xl font-black text-slate-900">KES {pkg.price}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 py-4 border-y border-slate-100 text-xs font-bold text-slate-600">
+                                        <div className="flex items-center justify-between">
+                                            <span>Speed Limit</span>
+                                            <span className="text-slate-900 font-extrabold">{pkg.speed_limit || "5M/5M"}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span>Duration</span>
+                                            <span className="text-slate-900 font-extrabold">{pkg.duration_minutes} Mins</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span>Device Limit</span>
+                                            <span className="text-slate-900 font-extrabold">{pkg.device_limit || 1} Device</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span>Assigned Router</span>
+                                            <span className="text-slate-900 font-extrabold">
+                                                {pkg.router_id ? nodes.find(n => n.id === pkg.router_id)?.name || `Router #${pkg.router_id}` : "Global (All Routers)"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 flex items-center justify-between text-xs">
+                                        {pkg.is_active !== false ? (
+                                            <span className="flex items-center gap-1.5 font-bold text-emerald-600">
+                                                <CheckCircle2 size={14} /> Active
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1.5 font-bold text-slate-400">
+                                                <Power size={14} /> Inactive
+                                            </span>
+                                        )}
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => openEditPackageModal(pkg)}
+                                                className="font-bold text-slate-500 hover:text-blue-600 hover:underline flex items-center gap-1"
+                                            >
+                                                <Pencil size={12} /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setRescueForm({
+                                                        phone_number: "",
+                                                        router_id: pkg.router_id ? String(pkg.router_id) : (nodes[0]?.id ? String(nodes[0].id) : ""),
+                                                        package_id: String(pkg.id),
+                                                        mpesa_receipt: "",
+                                                        notes: `Direct allocation of ${pkg.name}`
+                                                    });
+                                                    setShowRescueModal(true);
+                                                }}
+                                                className="font-bold text-blue-600 hover:underline"
+                                            >
+                                                Rescue/Issue This Package →
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-3xl border border-slate-200/70 p-12 text-center shadow-sm">
+                            <Zap size={40} className="text-slate-300 mx-auto mb-3" />
+                            <h4 className="font-bold text-slate-700 text-base">No Matching Hotspot Packages</h4>
+                            <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
+                                No packages matched your search or router filter. Try clearing your filters or create a new package.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setPackageSearch("");
+                                    setPackageRouterFilter("all");
+                                }}
+                                className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
