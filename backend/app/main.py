@@ -8,7 +8,7 @@ load_dotenv(override=True)
 
 # Import routers
 from app.routers import mikrotik, smartolt, mpesa, ai_assistant, employees, payroll, tickets
-from app.routers import saas_auth, subscriptions, payhero
+from app.routers import saas_auth, subscriptions, payhero, inventory, platform_admin
 
 app = FastAPI(title="My Net ISP Backend")
 
@@ -43,6 +43,8 @@ routers_to_mount = [
     saas_auth.router,
     subscriptions.router,
     payhero.router,
+    inventory.router,
+    platform_admin.router,
 ]
 
 for r in routers_to_mount:

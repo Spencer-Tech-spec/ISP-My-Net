@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Depends
 from pydantic import BaseModel
+from typing import Optional
 import requests
 import base64
 from datetime import datetime
@@ -14,8 +15,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-# Helper to get M-Pesa credentials from DB or Env
-def get_mpesa_credentials():
+# Helper to get M-Pesa credentials from Tenant, DB, or Env
+def get_mpesa_credentials(tenant: Optional[dict] = None):
     # Default from Env
     creds = {
         "CONSUMER_KEY": os.getenv("MPESA_CONSUMER_KEY"),
@@ -24,16 +25,28 @@ def get_mpesa_credentials():
         "PASSKEY": os.getenv("MPESA_PASSKEY"),
         "CALLBACK_URL": os.getenv("MPESA_CALLBACK_URL"),
         "INITIATOR_NAME": os.getenv("MPESA_INITIATOR_NAME"),
-        "INITIATOR_PASSWORD": os.getenv("MPESA_INITIATOR_PASSWORD")
+        "INITIATOR_PASSWORD": os.getenv("MPESA_INITIATOR_PASSWORD"),
+        "ENVIRONMENT": os.getenv("MPESA_ENVIRONMENT", "sandbox"),
+        "BANK_ACCOUNT": os.getenv("MPESA_BANK_ACCOUNT", "")
     }
 
-    # Try to fetch from Supabase 'settings' table
+    # 1. Check if tenant has their own specific Paybill / M-Pesa configuration
+    if tenant:
+        if tenant.get("mpesa_consumer_key"): creds["CONSUMER_KEY"] = tenant["mpesa_consumer_key"]
+        if tenant.get("mpesa_consumer_secret"): creds["CONSUMER_SECRET"] = tenant["mpesa_consumer_secret"]
+        if tenant.get("mpesa_shortcode"): creds["BUSINESS_SHORTCODE"] = tenant["mpesa_shortcode"]
+        if tenant.get("mpesa_passkey"): creds["PASSKEY"] = tenant["mpesa_passkey"]
+        if tenant.get("mpesa_callback_url"): creds["CALLBACK_URL"] = tenant["mpesa_callback_url"]
+        if tenant.get("mpesa_environment"): creds["ENVIRONMENT"] = tenant["mpesa_environment"]
+        if tenant.get("bank_account_number"): creds["BANK_ACCOUNT"] = tenant["bank_account_number"]
+        return creds
+
+    # 2. Fallback to Supabase 'settings' table
     if supabase:
         try:
             response = supabase.table("settings").select("*").eq("id", 1).single().execute()
             if response.data:
                 db_settings = response.data
-                # Override with DB values if they exist
                 if db_settings.get("mpesa_consumer_key"): creds["CONSUMER_KEY"] = db_settings["mpesa_consumer_key"]
                 if db_settings.get("mpesa_consumer_secret"): creds["CONSUMER_SECRET"] = db_settings["mpesa_consumer_secret"]
                 if db_settings.get("mpesa_shortcode"): creds["BUSINESS_SHORTCODE"] = db_settings["mpesa_shortcode"]
@@ -41,36 +54,37 @@ def get_mpesa_credentials():
                 if db_settings.get("mpesa_callback_url"): creds["CALLBACK_URL"] = db_settings["mpesa_callback_url"]
                 if db_settings.get("mpesa_initiator_name"): creds["INITIATOR_NAME"] = db_settings["mpesa_initiator_name"]
                 if db_settings.get("mpesa_initiator_password"): creds["INITIATOR_PASSWORD"] = db_settings["mpesa_initiator_password"]
+                if db_settings.get("bank_account_number"): creds["BANK_ACCOUNT"] = db_settings["bank_account_number"]
         except Exception as e:
-            print(f"Note: Could not fetch settings from DB (table might not exist yet): {e}")
+            print(f"Note: Could not fetch settings from DB: {e}")
     
     return creds
 
 class PaymentRequest(BaseModel):
     phone_number: str
     amount: int
-    account_reference: str = "MyNetISP"
+    account_reference: Optional[str] = None
     transaction_desc: str = "Payment for Internet Service"
 
-def get_access_token():
-    creds = get_mpesa_credentials()
-    key = creds["CONSUMER_KEY"]
-    secret = creds["CONSUMER_SECRET"]
+def get_access_token(creds: dict):
+    key = creds.get("CONSUMER_KEY")
+    secret = creds.get("CONSUMER_SECRET")
+    env = creds.get("ENVIRONMENT", "sandbox")
 
     if not key or not secret:
-        raise HTTPException(status_code=500, detail="M-Pesa credentials not configured")
+        raise HTTPException(status_code=500, detail="M-Pesa Consumer Key or Secret not configured")
 
-    auth_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-    print(f"DEBUG: Fetching access token from {auth_url}...")
+    base_url = "https://api.safaricom.co.ke" if env == "production" else "https://sandbox.safaricom.co.ke"
+    auth_url = f"{base_url}/oauth/v1/generate?grant_type=client_credentials"
+
     try:
         response = requests.get(auth_url, auth=(key, secret), timeout=10)
         response.raise_for_status()
         token = response.json()['access_token']
-        print("DEBUG: Access token fetched successfully")
-        return token
+        return token, base_url
     except Exception as e:
         print(f"Error getting access token: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get M-Pesa Access Token")
+        raise HTTPException(status_code=500, detail=f"Failed to get M-Pesa Access Token: {e}")
 
 @router.post("/stk_push")
 def initiate_stk_push(
@@ -78,20 +92,20 @@ def initiate_stk_push(
     background_tasks: BackgroundTasks,
     ctx: TenantContext = Depends(get_tenant_context),
 ):
-    creds = get_mpesa_credentials()
-    passkey = creds["PASSKEY"]
-    callback_url = creds["CALLBACK_URL"]
-    shortcode = creds["BUSINESS_SHORTCODE"]
+    creds = get_mpesa_credentials(ctx.tenant if ctx else None)
+    passkey = creds.get("PASSKEY")
+    callback_url = creds.get("CALLBACK_URL") or os.getenv("MPESA_CALLBACK_URL")
+    shortcode = creds.get("BUSINESS_SHORTCODE")
 
     if not passkey or not callback_url:
          raise HTTPException(status_code=500, detail="M-Pesa Passkey or Callback URL not configured")
 
-    access_token = get_access_token()
+    access_token, base_url = get_access_token(creds)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     password_str = f"{shortcode}{passkey}{timestamp}"
     password = base64.b64encode(password_str.encode()).decode('utf-8')
     
-    stk_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+    stk_url = f"{base_url}/mpesa/stkpush/v1/processrequest"
     
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -99,9 +113,16 @@ def initiate_stk_push(
     }
     
     # Format phone number to 254... (remove +)
-    phone = payment.phone_number.replace("+", "")
+    phone = payment.phone_number.replace("+", "").replace(" ", "").strip()
     if phone.startswith("0"):
         phone = "254" + phone[1:]
+    elif not phone.startswith("254") and len(phone) == 9:
+        phone = "254" + phone
+
+    # For Bank Paybills (e.g. Equity 247247, KCB 522522), AccountReference MUST be their Bank Account Number!
+    account_ref = payment.account_reference or creds.get("BANK_ACCOUNT") or f"MYNET-{phone[-6:]}"
+    if creds.get("BANK_ACCOUNT") and shortcode in ["247247", "522522", "400200", "888888", "222111", "303030"]:
+        account_ref = creds["BANK_ACCOUNT"]
 
     payload = {
         "BusinessShortCode": shortcode,
@@ -113,7 +134,7 @@ def initiate_stk_push(
         "PartyB": shortcode, # Receiving Paybill Number
         "PhoneNumber": phone,
         "CallBackURL": callback_url,
-        "AccountReference": payment.account_reference,
+        "AccountReference": account_ref,
         "TransactionDesc": payment.transaction_desc
     }
     

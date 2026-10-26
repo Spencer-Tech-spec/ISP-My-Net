@@ -81,18 +81,17 @@ async def get_tenant_context(
     user_id = user.id
     email = user.email
 
-    # Super Admin Impersonation Logic
-    super_admins = ["muneneoscar599@gmail.com", "lordcommander334@gmail.com"]
-    impersonate_isp_id = request.headers.get("X-Impersonate-ISP-ID")
-
-    if email in super_admins and impersonate_isp_id:
-        # Super admin is impersonating an ISP
-        tenant_resp = supabase.table("isp_tenants").select("*").eq("id", impersonate_isp_id).single().execute()
-        if not tenant_resp.data:
-            raise HTTPException(status_code=404, detail="Impersonated ISP not found.")
+    # Super Admin Flow: if impersonating or no specific role, bind to target or primary tenant
+    if email in super_admins:
+        if impersonate_isp_id:
+            tenant_resp = supabase.table("isp_tenants").select("*").eq("id", impersonate_isp_id).single().execute()
+            if tenant_resp.data:
+                return TenantContext(tenant=tenant_resp.data, user_id=user_id, user_role="owner")
         
-        ctx = TenantContext(tenant=tenant_resp.data, user_id=user_id, user_role="owner")
-        return ctx
+        # Fallback: bind to the first available ISP tenant so super admin is never locked out
+        first_resp = supabase.table("isp_tenants").select("*").order("created_at", desc=True).limit(1).execute()
+        if first_resp.data:
+            return TenantContext(tenant=first_resp.data[0], user_id=user_id, user_role="owner")
 
     # Normal Flow: Find this user's role within an ISP
     role_response = supabase.table("isp_staff_roles") \
@@ -103,12 +102,6 @@ async def get_tenant_context(
         .execute()
 
     if not role_response.data:
-        # If super admin doesn't have their own ISP, they MUST impersonate to use the dashboard
-        if email in super_admins:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Super Admin: Please select an ISP to impersonate.",
-            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No ISP account found for this user. Please register your ISP first.",

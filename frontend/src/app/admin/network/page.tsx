@@ -57,6 +57,7 @@ export default function NetworkPage() {
     const [testingConnection, setTestingConnection] = useState(false);
     const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
     const [copiedLink, setCopiedLink] = useState<string | null>(null);
+    const [deletingRouterId, setDeletingRouterId] = useState<number | null>(null);
 
     // New Router Form State
     const [newNode, setNewNode] = useState({
@@ -300,12 +301,55 @@ export default function NetworkPage() {
 
     const handleDeleteNode = async (id: number, name: string) => {
         if (!window.confirm(`Are you sure you want to remove "${name}" from the network?`)) return;
+        setDeletingRouterId(id);
         try {
-            const { error } = await supabase.from("mikrotik_routers").delete().eq("id", id);
-            if (error) throw error;
-            setNodes(nodes.filter((n) => n.id !== id));
+            let deleted = false;
+            let errorMsg = "";
+
+            // 1. Primary: Same-origin Next.js server route handler (works directly on Vercel & local without CORS/RLS hurdles)
+            try {
+                const res = await fetch(`/api/routers?id=${id}`, { method: "DELETE" });
+                if (res.ok) {
+                    deleted = true;
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    if (data?.error) errorMsg = data.error;
+                }
+            } catch (e: any) {
+                console.warn("Next.js API route delete failed, falling back:", e);
+            }
+
+            // 2. Fallback: Python FastAPI backend endpoint
+            if (!deleted) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/mikrotik/routers/${id}`, { method: "DELETE" });
+                    if (res.ok) {
+                        deleted = true;
+                    }
+                } catch (e: any) {
+                    console.warn("FastAPI backend delete failed, falling back to direct DB:", e);
+                }
+            }
+
+            // 3. Fallback: Direct Supabase client
+            if (!deleted) {
+                const { data, error } = await supabase.from("mikrotik_routers").delete().eq("id", id).select();
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    deleted = true;
+                }
+            }
+
+            if (deleted) {
+                setNodes((prev) => prev.filter((n) => n.id !== id));
+            } else {
+                throw new Error(errorMsg || "Could not delete router from database. Please verify your Supabase permissions.");
+            }
         } catch (err: any) {
-            alert("Failed to delete: " + err.message);
+            console.error("Failed to delete router:", err);
+            alert("Failed to delete router: " + (err.message || String(err)));
+        } finally {
+            setDeletingRouterId(null);
         }
     };
 
@@ -654,10 +698,15 @@ export default function NetworkPage() {
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => handleDeleteNode(node.id, node.name)}
-                                                        className="p-2 text-slate-300 hover:text-rose-600 transition-colors"
+                                                        disabled={deletingRouterId === node.id}
+                                                        className="p-2 text-slate-300 hover:text-rose-600 disabled:opacity-50 transition-colors"
                                                         title="Delete Router"
                                                     >
-                                                        <Trash2 size={18} />
+                                                        {deletingRouterId === node.id ? (
+                                                            <Loader2 size={18} className="animate-spin text-rose-500" />
+                                                        ) : (
+                                                            <Trash2 size={18} />
+                                                        )}
                                                     </button>
                                                 </div>
                                             </div>

@@ -286,3 +286,33 @@ add name="default-billing" keepalive-timeout=5m status-autorefresh=1m transparen
         "portal_url": portal_url,
         "script": script
     }
+
+@router.delete("/routers/{router_id}")
+async def delete_router(router_id: int):
+    """
+    Deletes a MikroTik router and cleanly unlinks any dependent hotspot packages or vouchers.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database client unavailable")
+    
+    try:
+        # Nullify foreign references if any
+        try:
+            supabase.table("hotspot_packages").update({"router_id": None}).eq("router_id", router_id).execute()
+        except Exception:
+            pass
+
+        try:
+            supabase.table("hotspot_vouchers").update({"router_id": None}).eq("router_id", router_id).execute()
+        except Exception:
+            pass
+
+        res = supabase.table("mikrotik_routers").delete().eq("id", router_id).execute()
+        return {
+            "status": "success",
+            "message": f"Router {router_id} deleted successfully",
+            "data": res.data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete router: {str(e)}")
+
