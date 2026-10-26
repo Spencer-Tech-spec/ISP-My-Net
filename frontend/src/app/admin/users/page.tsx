@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     Search,
     Filter,
@@ -13,106 +13,197 @@ import {
     Edit2,
     X,
     Check,
-    Loader2
+    Loader2,
+    MapPin,
+    CreditCard,
+    User
 } from "lucide-react";
-import { createClient } from "@/lib/supabase";
+
+interface Subscriber {
+    id: string;
+    full_name?: string;
+    username?: string;
+    email?: string;
+    phone?: string;
+    plan?: string;
+    status?: string;
+    address?: string;
+    id_number?: string;
+    created_at?: string;
+    [key: string]: any;
+}
+
+const EMPTY_FORM: Omit<Subscriber, "id"> = {
+    full_name: "",
+    email: "",
+    phone: "",
+    plan: "Basic",
+    status: "Active",
+    username: "",
+    address: "",
+    id_number: "",
+};
 
 export default function SubscribersPage() {
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<Subscriber[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [editingUser, setEditingUser] = useState<any | null>(null);
+    const [editingUser, setEditingUser] = useState<Subscriber | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const supabase = createClient();
 
-    const fetchUsers = async () => {
+    // Add New Subscriber state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newSub, setNewSub] = useState<Omit<Subscriber, "id">>(EMPTY_FORM);
+    const [isAdding, setIsAdding] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+    // Fetch via server route (bypasses RLS)
+    const fetchUsers = useCallback(async () => {
         setLoading(true);
         setErrorMsg(null);
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*');
+            const res = await fetch("/api/subscribers");
+            const json = await res.json();
 
-            if (error) {
-                console.error("SUPABASE ERROR:", error);
-                // If it's just an empty table, don't show an intrusive error banner
-                if (error.code !== "PGRST116") {
-                    setErrorMsg(`${error.message || "Failed to load subscribers"}`);
-                }
+            if (!res.ok) {
+                setErrorMsg(json.error || "Failed to load subscribers");
                 setUsers([]);
-            } else if (data) {
-                setUsers(data);
+            } else {
+                setUsers(json.subscribers || []);
             }
         } catch (err: any) {
             console.error("Fetch users exception:", err);
+            setErrorMsg("Network error loading subscribers");
             setUsers([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchUsers();
-    }, [supabase]);
+    }, [fetchUsers]);
 
-    const handleToggleStatus = async (user: any) => {
-        const newStatus = user.status?.toLowerCase() === "active" ? "Inactive" : "Active";
-        
+    // Flash success messages then clear
+    useEffect(() => {
+        if (successMsg) {
+            const t = setTimeout(() => setSuccessMsg(null), 4000);
+            return () => clearTimeout(t);
+        }
+    }, [successMsg]);
+
+    // ─── Add New Subscriber ────────────────────────────────────────────
+    const handleAddSubscriber = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAddError(null);
+
+        if (!newSub.full_name?.trim()) {
+            setAddError("Full name is required.");
+            return;
+        }
+        if (!newSub.phone?.trim()) {
+            setAddError("Phone number is required.");
+            return;
+        }
+
+        setIsAdding(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ status: newStatus })
-                .eq('id', user.id);
+            const res = await fetch("/api/subscribers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newSub),
+            });
 
-            if (error) throw error;
-            
-            // Update local state
+            const json = await res.json();
+
+            if (!res.ok) {
+                setAddError(json.error || "Failed to create subscriber");
+                return;
+            }
+
+            // Add to top of local state for instant feedback
+            if (json.subscriber) {
+                setUsers((prev) => [json.subscriber, ...prev]);
+            } else {
+                await fetchUsers(); // fallback full refetch
+            }
+
+            setSuccessMsg(`✅ ${newSub.full_name} added successfully!`);
+            setNewSub(EMPTY_FORM);
+            setShowAddModal(false);
+        } catch (err: any) {
+            setAddError("Network error: " + (err.message || "please try again"));
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    // ─── Toggle Status ─────────────────────────────────────────────────
+    const handleToggleStatus = async (user: Subscriber) => {
+        const newStatus = user.status?.toLowerCase() === "active" ? "Inactive" : "Active";
+
+        try {
+            const res = await fetch("/api/subscribers", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: user.id, status: newStatus }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+
             setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         } catch (err: any) {
             alert("Failed to update status: " + err.message);
         }
     };
 
-    const handleDelete = async (userId: any) => {
+    // ─── Delete Subscriber ─────────────────────────────────────────────
+    const handleDelete = async (userId: string) => {
         if (!window.confirm("Are you sure you want to delete this subscriber? This action cannot be undone.")) return;
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', userId);
+            const res = await fetch(`/api/subscribers?id=${encodeURIComponent(userId)}`, {
+                method: "DELETE",
+            });
 
-            if (error) throw error;
-            
-            // Update local state
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+
             setUsers(users.filter(u => u.id !== userId));
+            setSuccessMsg("Subscriber deleted successfully.");
         } catch (err: any) {
-            alert("Failed to delete user: " + err.message);
+            alert("Failed to delete subscriber: " + err.message);
         }
     };
 
+    // ─── Edit / Save ───────────────────────────────────────────────────
     const handleSaveEdit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingUser) return;
 
         setIsSaving(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
+            const res = await fetch("/api/subscribers", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: editingUser.id,
                     full_name: editingUser.full_name,
                     phone: editingUser.phone,
                     plan: editingUser.plan,
-                    status: editingUser.status
-                })
-                .eq('id', editingUser.id);
+                    status: editingUser.status,
+                }),
+            });
 
-            if (error) throw error;
-            
-            // Update local state
-            setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+
+            setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...editingUser } : u));
             setEditingUser(null);
+            setSuccessMsg("Subscriber updated successfully.");
         } catch (err: any) {
             alert("Failed to save changes: " + err.message);
         } finally {
@@ -150,12 +241,31 @@ export default function SubscribersPage() {
                     </div>
                 </div>
             )}
+
+            {/* Success Banner */}
+            {successMsg && (
+                <div className="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-xl shadow-sm animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center gap-3">
+                        <Check className="text-emerald-500" size={20} />
+                        <p className="text-sm font-bold text-emerald-800">{successMsg}</p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Subscriber Management</h2>
                     <p className="text-slate-500 text-sm">Monitor and edit subscriber details and connectivity status.</p>
                 </div>
-                <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
+                <button
+                    id="btn-add-subscriber"
+                    onClick={() => {
+                        setNewSub(EMPTY_FORM);
+                        setAddError(null);
+                        setShowAddModal(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                >
                     <UserPlus size={18} />
                     Add New Subscriber
                 </button>
@@ -284,7 +394,167 @@ export default function SubscribersPage() {
                 </div>
             </div>
 
-            {/* Edit User Modal */}
+            {/* ═══════════ ADD NEW SUBSCRIBER MODAL ═══════════ */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                    <UserPlus size={20} className="text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-white text-lg">Add New Subscriber</h3>
+                                    <p className="text-blue-100 text-xs">Fill in the details to register a new subscriber</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white/20 rounded-xl text-white/80 hover:text-white transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Error inside modal */}
+                        {addError && (
+                            <div className="mx-6 mt-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold p-3 rounded-xl flex items-center gap-2">
+                                <Shield size={16} className="text-rose-500 shrink-0" />
+                                {addError}
+                            </div>
+                        )}
+
+                        {/* Form */}
+                        <form onSubmit={handleAddSubscriber} className="p-6 space-y-4">
+                            {/* Full Name */}
+                            <div>
+                                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                    <User size={12} /> Full Name <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    id="input-add-name"
+                                    type="text"
+                                    required
+                                    placeholder="e.g. John Kamau"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                    value={newSub.full_name || ""}
+                                    onChange={(e) => setNewSub({ ...newSub, full_name: e.target.value })}
+                                />
+                            </div>
+
+                            {/* Phone & Email row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <Phone size={12} /> Phone <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        id="input-add-phone"
+                                        type="tel"
+                                        required
+                                        placeholder="0712345678"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.phone || ""}
+                                        onChange={(e) => setNewSub({ ...newSub, phone: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <Mail size={12} /> Email
+                                    </label>
+                                    <input
+                                        id="input-add-email"
+                                        type="email"
+                                        placeholder="john@example.com"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.email || ""}
+                                        onChange={(e) => setNewSub({ ...newSub, email: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* ID Number & Address row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <CreditCard size={12} /> ID Number
+                                    </label>
+                                    <input
+                                        id="input-add-id-number"
+                                        type="text"
+                                        placeholder="National ID"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.id_number || ""}
+                                        onChange={(e) => setNewSub({ ...newSub, id_number: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        <MapPin size={12} /> Address / Location
+                                    </label>
+                                    <input
+                                        id="input-add-address"
+                                        type="text"
+                                        placeholder="Estate, Town"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.address || ""}
+                                        onChange={(e) => setNewSub({ ...newSub, address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Plan & Status row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Internet Plan</label>
+                                    <select
+                                        id="select-add-plan"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.plan || "Basic"}
+                                        onChange={(e) => setNewSub({ ...newSub, plan: e.target.value })}
+                                    >
+                                        <option value="Basic">Basic</option>
+                                        <option value="Gold">Gold</option>
+                                        <option value="Diamond">Diamond</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Account Status</label>
+                                    <select
+                                        id="select-add-status"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                                        value={newSub.status || "Active"}
+                                        onChange={(e) => setNewSub({ ...newSub, status: e.target.value })}
+                                    >
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Submit buttons */}
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddModal(false)}
+                                    className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    id="btn-submit-subscriber"
+                                    type="submit"
+                                    disabled={isAdding}
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-95"
+                                >
+                                    {isAdding ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
+                                    {isAdding ? "Creating..." : "Add Subscriber"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════ EDIT SUBSCRIBER MODAL ═══════════ */}
             {editingUser && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
