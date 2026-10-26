@@ -26,21 +26,21 @@ export default function ChatAssistant() {
         scrollToBottom();
     }, [messages]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
+    const sendMessage = async (text: string) => {
+        if (!text.trim() || isLoading) return;
 
-        const userMessage: Message = { role: "user", content: input };
+        const userMessage: Message = { role: "user", content: text };
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
 
         try {
-            const response = await fetch("http://localhost:8000/api/ai/chat", {
+            // First try relative same-origin Next.js server route (works on Vercel & local)
+            const response = await fetch("/api/ai/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: [...messages, userMessage]
+                    messages: [...messages, userMessage],
                 }),
             });
 
@@ -52,11 +52,16 @@ export default function ChatAssistant() {
             console.error("Chat error:", error);
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: "Sorry, I encountered an error. Please check if the backend is running or try again later." }
+                { role: "assistant", content: "Sorry, I encountered an error connecting to the AI service. Please verify your connection or try again." },
             ]);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        sendMessage(input);
     };
 
     return (
@@ -125,15 +130,36 @@ export default function ChatAssistant() {
                         <div ref={messagesEndRef} />
                     </div>
 
+                    {/* Quick suggestion chips */}
+                    {messages.length <= 3 && !isLoading && (
+                        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                            {[
+                                "Is my router online?",
+                                "Customer paid but disconnected",
+                                "How to add subscriber",
+                                "Hotspot vouchers",
+                            ].map((suggestion, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => sendMessage(suggestion)}
+                                    className="px-2.5 py-1 bg-white hover:bg-blue-50 hover:text-blue-600 border border-slate-200 rounded-full text-[11px] font-semibold text-slate-600 whitespace-nowrap transition-all shadow-2xs"
+                                >
+                                    {suggestion}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Input */}
-                    <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-slate-100">
+                    <form onSubmit={handleSubmit} className="p-3.5 bg-white border-t border-slate-100">
                         <div className="relative">
                             <input
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Ask me anything..."
-                                className="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all text-black"
+                                placeholder="Ask My Net AI about routers, billing, or setup..."
+                                className="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-2xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 transition-all text-black"
                                 disabled={isLoading}
                             />
                             <button
